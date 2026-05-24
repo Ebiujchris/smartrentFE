@@ -54,8 +54,9 @@ const Button = React.forwardRef<
   const buttonClass = cn(buttonVariants({ variant, size, className }))
   
   if (asChild && React.isValidElement(children)) {
-    return React.cloneElement(children as React.ReactElement<any>, {
-      className: cn(buttonClass, children.props.className),
+    const childElement = children as React.ReactElement<any>;
+    return React.cloneElement(childElement, {
+      className: cn(buttonClass, childElement.props.className),
       suppressHydrationWarning: true,
       ref,
       ...props,
