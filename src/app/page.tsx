@@ -8,21 +8,20 @@ import { ArrowRight, CheckCircle2, Home, Users, CreditCard } from 'lucide-react'
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50" suppressHydrationWarning>
-      {/* Navigation */}
+    <div className="min-h-screen flex flex-col bg-slate-50">{/* Navigation */}
       <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
         <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-8">
           <div className="flex items-center gap-2">
             <div className="bg-slate-900 p-1.5 rounded-md">
               <Home className="h-5 w-5 text-emerald-400" />
             </div>
-            <span className="text-xl font-bold text-slate-900 tracking-tight">SmartRentUG</span>
+            <span className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">SmartRentUG</span>
           </div>
-          <div className="flex items-center gap-4">
-            <Link href="/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Link href="/login" className="text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
               Sign In
             </Link>
-            <Button asChild className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-6">
+            <Button asChild className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-3 sm:px-6 h-8 sm:h-10 text-xs sm:text-sm">
               <Link href="/register">Get Started</Link>
             </Button>
           </div>
