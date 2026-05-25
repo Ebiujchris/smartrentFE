@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { usePropertyStore } from '@/store/propertyStore';
+import { toast } from 'sonner';
 
 export default function PropertySetupPage() {
   const router = useRouter();
@@ -53,10 +54,17 @@ export default function PropertySetupPage() {
         }
       }
 
+      toast.success('Property setup complete!', {
+        description: `${property.name} with ${units.length} unit(s) has been added successfully.`,
+      });
+
       // Navigate to dashboard
       router.push('/dashboard');
     } catch (err) {
       console.error('Failed to create property:', err);
+      toast.error('Failed to create property', {
+        description: 'Please check the information and try again.',
+      });
     }
   };
 

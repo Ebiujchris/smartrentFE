@@ -102,10 +102,11 @@ export const usePropertyStore = create<PropertyState>((set, get) => ({
   createUnit: async (propertyId: string, data: CreateUnitData) => {
     set({ isLoading: true, error: null });
     try {
-      await propertyService.createUnit(propertyId, data);
-      // Refresh the property to get updated units
-      await get().fetchProperty(propertyId);
+      const newUnit = await propertyService.createUnit(propertyId, data);
+      // Refresh all properties to get updated units list
+      await get().fetchProperties();
       set({ isLoading: false });
+      return newUnit;
     } catch (error: any) {
       set({
         error: error.response?.data?.message || 'Failed to create unit',

@@ -1,10 +1,23 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Search, Bell } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
+import { useSubscriptionStore } from '@/store/subscriptionStore';
 
 export default function Navbar() {
   const { user } = useAuthStore();
+  const { subscription, fetchSubscription } = useSubscriptionStore();
+
+  // Fetch subscription on mount and when user changes
+  useEffect(() => {
+    if (user) {
+      fetchSubscription();
+    }
+  }, [user]);
+
+  // The subscription from the store will automatically update when changed
+  // No need for additional useEffect since Zustand handles reactivity
 
   return (
     <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6">
@@ -21,9 +34,9 @@ export default function Navbar() {
       {/* Right side */}
       <div className="flex items-center gap-4">
         {/* Subscription Badge */}
-        {user?.subscription && (
+        {subscription && (
           <span className="px-3 py-1.5 text-sm font-medium bg-emerald-100 text-emerald-700 rounded-full">
-            {user.subscription.plan || 'Trial'} Plan
+            {subscription.plan} Plan
           </span>
         )}
 

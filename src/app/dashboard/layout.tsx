@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Navbar from '@/components/dashboard/Navbar';
+import ToastProvider from '@/components/providers/ToastProvider';
 
 export default function DashboardLayout({
   children,
@@ -43,15 +44,18 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
-      <Sidebar />
-      
-      <div className="flex flex-col flex-1">
-        <Navbar />
-        <main className="p-6 space-y-6 flex-1">
-          {children}
-        </main>
+    <>
+      <ToastProvider />
+      <div className="flex min-h-screen bg-slate-50">
+        <Sidebar />
+        
+        <div className="flex flex-col flex-1">
+          <Navbar />
+          <main className="p-6 space-y-6 flex-1">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

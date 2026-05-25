@@ -6,14 +6,23 @@ import { Button } from '@/components/ui/button';
 import { usePropertyStore } from '@/store/propertyStore';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 export default function PropertiesPage() {
-  const { properties, fetchProperties, createProperty, isLoading } = usePropertyStore();
+  const { properties, fetchProperties, createProperty, createUnit, isLoading } = usePropertyStore();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showUnitsModal, setShowUnitsModal] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: '',
     address: '',
     description: '',
+  });
+  const [unitFormData, setUnitFormData] = useState({
+    unitNumber: '',
+    rentAmount: '',
+    bedrooms: '',
+    bathrooms: '',
   });
 
   useEffect(() => {
@@ -24,11 +33,56 @@ export default function PropertiesPage() {
     e.preventDefault();
     try {
       await createProperty(formData);
+      toast.success('Property added successfully!', {
+        description: `${formData.name} has been added to your properties.`,
+      });
       setFormData({ name: '', address: '', description: '' });
       setShowAddModal(false);
     } catch (error) {
       console.error('Failed to create property:', error);
+      toast.error('Failed to add property', {
+        description: 'Please check the information and try again.',
+      });
     }
+  };
+
+  const handleAddUnit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProperty) return;
+
+    try {
+      await createUnit(selectedProperty.id, {
+        unitNumber: unitFormData.unitNumber,
+        rentAmount: parseFloat(unitFormData.rentAmount),
+        bedrooms: unitFormData.bedrooms ? parseInt(unitFormData.bedrooms) : undefined,
+        bathrooms: unitFormData.bathrooms ? parseInt(unitFormData.bathrooms) : undefined,
+        status: 'VACANT',
+      });
+      
+      toast.success('Unit added successfully!', {
+        description: `Unit ${unitFormData.unitNumber} has been added to ${selectedProperty.name}.`,
+      });
+      
+      setUnitFormData({
+        unitNumber: '',
+        rentAmount: '',
+        bedrooms: '',
+        bathrooms: '',
+      });
+      
+      // Refresh properties to show new unit
+      await fetchProperties();
+    } catch (error) {
+      console.error('Failed to add unit:', error);
+      toast.error('Failed to add unit', {
+        description: 'Please check the information and try again.',
+      });
+    }
+  };
+
+  const openUnitsModal = (property: any) => {
+    setSelectedProperty(property);
+    setShowUnitsModal(true);
   };
 
   if (isLoading && properties.length === 0) {
@@ -113,7 +167,10 @@ export default function PropertiesPage() {
                 <Button variant="outline" className="flex-1 text-sm">
                   View Details
                 </Button>
-                <Button className="flex-1 text-sm bg-emerald-500 hover:bg-emerald-600">
+                <Button 
+                  onClick={() => openUnitsModal(property)}
+                  className="flex-1 text-sm bg-emerald-500 hover:bg-emerald-600"
+                >
                   Manage Units
                 </Button>
               </div>
@@ -183,6 +240,120 @@ export default function PropertiesPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Units Modal */}
+      {showUnitsModal && selectedProperty && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">Manage Units</h2>
+                <p className="text-slate-600">{selectedProperty.name}</p>
+              </div>
+              <Button
+                onClick={() => setShowUnitsModal(false)}
+                variant="outline"
+                size="sm"
+              >
+                Close
+              </Button>
+            </div>
+
+            {/* Existing Units */}
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-slate-900 mb-3">
+                Existing Units ({selectedProperty.units?.length || 0})
+              </h3>
+              {selectedProperty.units && selectedProperty.units.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {selectedProperty.units.map((unit: any) => (
+                    <div key={unit.id} className="border border-slate-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-semibold text-slate-900">Unit {unit.unitNumber}</span>
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          unit.status === 'VACANT' ? 'bg-slate-100 text-slate-700' : 'bg-emerald-100 text-emerald-700'
+                        }`}>
+                          {unit.status}
+                        </span>
+                      </div>
+                      <div className="text-sm text-slate-600 space-y-1">
+                        <div>Rent: UGX {Number(unit.rentAmount).toLocaleString()}</div>
+                        {unit.bedrooms && <div>Bedrooms: {unit.bedrooms}</div>}
+                        {unit.bathrooms && <div>Bathrooms: {unit.bathrooms}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-slate-500 text-center py-4">No units added yet</p>
+              )}
+            </div>
+
+            {/* Add New Unit Form */}
+            <div className="border-t border-slate-200 pt-6">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Add New Unit</h3>
+              <form onSubmit={handleAddUnit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="unitNumber">Unit Number *</Label>
+                    <Input
+                      id="unitNumber"
+                      value={unitFormData.unitNumber}
+                      onChange={(e) => setUnitFormData({ ...unitFormData, unitNumber: e.target.value })}
+                      placeholder="e.g., A1, 101"
+                      required
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="rentAmount">Monthly Rent (UGX) *</Label>
+                    <Input
+                      id="rentAmount"
+                      type="number"
+                      value={unitFormData.rentAmount}
+                      onChange={(e) => setUnitFormData({ ...unitFormData, rentAmount: e.target.value })}
+                      placeholder="e.g., 500000"
+                      required
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="bedrooms">Bedrooms</Label>
+                    <Input
+                      id="bedrooms"
+                      type="number"
+                      value={unitFormData.bedrooms}
+                      onChange={(e) => setUnitFormData({ ...unitFormData, bedrooms: e.target.value })}
+                      placeholder="e.g., 2"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="bathrooms">Bathrooms</Label>
+                    <Input
+                      id="bathrooms"
+                      type="number"
+                      value={unitFormData.bathrooms}
+                      onChange={(e) => setUnitFormData({ ...unitFormData, bathrooms: e.target.value })}
+                      placeholder="e.g., 1"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full bg-emerald-500 hover:bg-emerald-600"
+                  disabled={isLoading}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {isLoading ? 'Adding...' : 'Add Unit'}
+                </Button>
+              </form>
+            </div>
           </div>
         </div>
       )}

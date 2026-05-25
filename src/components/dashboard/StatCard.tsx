@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { LucideIcon } from 'lucide-react';
 
 interface StatCardProps {
@@ -11,7 +12,7 @@ interface StatCardProps {
   iconBgColor?: string;
 }
 
-export default function StatCard({ title, value, icon: Icon, trend, iconBgColor = 'bg-emerald-100' }: StatCardProps) {
+function StatCard({ title, value, icon: Icon, trend, iconBgColor = 'bg-emerald-100' }: StatCardProps) {
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between">
@@ -31,3 +32,5 @@ export default function StatCard({ title, value, icon: Icon, trend, iconBgColor 
     </div>
   );
 }
+
+export default memo(StatCard);

@@ -7,6 +7,7 @@ import { useTenantStore } from '@/store/tenantStore';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 export default function TenantsPage() {
   const { tenants, loading, fetchTenants, createTenant } = useTenantStore();
@@ -29,6 +30,9 @@ export default function TenantsPage() {
     e.preventDefault();
     try {
       await createTenant(formData);
+      toast.success('Tenant added successfully!', {
+        description: `${formData.fullName} has been added to your system.`,
+      });
       setIsOpen(false);
       setFormData({
         email: '',
@@ -41,6 +45,9 @@ export default function TenantsPage() {
       });
     } catch (error) {
       console.error('Failed to create tenant:', error);
+      toast.error('Failed to add tenant', {
+        description: 'Please check the information and try again.',
+      });
     }
   };
 

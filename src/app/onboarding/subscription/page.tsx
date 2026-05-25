@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useSubscriptionStore } from '@/store/subscriptionStore';
 
 const plans = [
   {
@@ -13,10 +14,14 @@ const plans = [
     units: '1-10 Units',
     features: [
       'Tenant management',
-      'Rent tracking',
+      'Rent tracking & payment recording',
+      'Lease management',
+      'Maintenance request tracking',
       'Receipt generation',
-      'Basic reports',
-      'Email support',
+      'Advanced analytics & reports',
+      'SMS & email notifications',
+      'Multi-manager support',
+      'Priority support',
     ],
   },
   {
@@ -26,10 +31,14 @@ const plans = [
     units: '11-20 Units',
     popular: true,
     features: [
-      'Everything in Starter',
-      'Advanced analytics',
-      'Maintenance tracking',
-      'SMS reminders',
+      'Tenant management',
+      'Rent tracking & payment recording',
+      'Lease management',
+      'Maintenance request tracking',
+      'Receipt generation',
+      'Advanced analytics & reports',
+      'SMS & email notifications',
+      'Multi-manager support',
       'Priority support',
     ],
   },
@@ -39,22 +48,36 @@ const plans = [
     price: 200000,
     units: '21+ Units',
     features: [
-      'Everything in Professional',
+      'Tenant management',
+      'Rent tracking & payment recording',
+      'Lease management',
+      'Maintenance request tracking',
+      'Receipt generation',
+      'Advanced analytics & reports',
+      'SMS & email notifications',
       'Multi-manager support',
-      'WhatsApp alerts',
-      'Custom reports',
-      'Dedicated support',
+      'Priority support',
     ],
   },
 ];
 
 export default function SubscriptionPage() {
   const router = useRouter();
+  const { updateSubscription } = useSubscriptionStore();
   const [selectedPlan, setSelectedPlan] = useState('PROFESSIONAL');
+  const [loading, setLoading] = useState(false);
 
-  const handleContinue = () => {
-    // In production, this would create/update the subscription
-    router.push('/onboarding/property');
+  const handleContinue = async () => {
+    setLoading(true);
+    try {
+      await updateSubscription({ plan: selectedPlan as any });
+      router.push('/onboarding/property');
+    } catch (error) {
+      console.error('Failed to update subscription:', error);
+      alert('Failed to select plan. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -66,7 +89,7 @@ export default function SubscriptionPage() {
             Choose the plan that fits your needs
           </h1>
           <p className="text-lg text-slate-600">
-            Start with a 14-day free trial. Upgrade or downgrade anytime.
+            Start with a 30-day free trial. No payment required. Upgrade or downgrade anytime.
           </p>
         </div>
 
@@ -103,6 +126,7 @@ export default function SubscriptionPage() {
                   </span>
                   <span className="text-slate-600">/month</span>
                 </div>
+                <p className="text-sm text-emerald-600 font-semibold">30 days free</p>
               </div>
 
               <ul className="space-y-3 mb-8">
@@ -131,12 +155,20 @@ export default function SubscriptionPage() {
         <div className="text-center">
           <Button
             onClick={handleContinue}
+            disabled={loading}
             className="bg-emerald-500 hover:bg-emerald-600 text-white px-12 py-6 text-lg"
           >
-            Start 14-Day Free Trial
+            {loading ? (
+              <>
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                Setting up...
+              </>
+            ) : (
+              'Start 30-Day Free Trial'
+            )}
           </Button>
           <p className="text-sm text-slate-500 mt-4">
-            No credit card required. Cancel anytime.
+            No payment required. Cancel anytime during trial.
           </p>
         </div>
       </div>
