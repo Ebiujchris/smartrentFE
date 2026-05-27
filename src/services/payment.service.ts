@@ -1,4 +1,4 @@
-import api from '@/lib/api';
+import api from "@/lib/api";
 
 export interface CreatePaymentDto {
   leaseId: string;
@@ -22,17 +22,17 @@ export interface UpdatePaymentDto {
 
 export const paymentService = {
   async createPayment(data: CreatePaymentDto) {
-    const response = await api.post('/payments', data);
+    const response = await api.post("/payments", data);
     return response.data;
   },
 
   async getAllPayments() {
-    const response = await api.get('/payments');
+    const response = await api.get("/payments");
     return response.data;
   },
 
   async getOverduePayments() {
-    const response = await api.get('/payments/overdue');
+    const response = await api.get("/payments/overdue");
     return response.data;
   },
 
@@ -46,8 +46,17 @@ export const paymentService = {
     return response.data;
   },
 
-  async recordPayment(id: string, method: string, reference?: string) {
-    const response = await api.post(`/payments/${id}/record`, { method, reference });
+  async recordPayment(
+    id: string,
+    method: string,
+    reference?: string,
+    notes?: string,
+  ) {
+    const response = await api.post(`/payments/${id}/record`, {
+      method,
+      reference,
+      notes,
+    });
     return response.data;
   },
 

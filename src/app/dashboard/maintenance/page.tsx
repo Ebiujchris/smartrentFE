@@ -131,7 +131,7 @@ export default function MaintenancePage() {
                 <div className="ml-4">
                   <Select
                     value={request.status}
-                    onValueChange={(value) => handleStatusChange(request.id, value)}
+                    onValueChange={(value) => handleStatusChange(request.id, value as string)}
                     disabled={updatingId === request.id}
                   >
                     <SelectTrigger className="w-40">

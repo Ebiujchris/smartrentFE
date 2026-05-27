@@ -25,7 +25,12 @@ export default function LoginPage() {
     
     try {
       await login(formData);
-      router.push('/dashboard');
+      const { user } = useAuthStore.getState();
+      if (user?.role === 'TENANT') {
+        router.push('/tenant-dashboard');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (err) {
       console.error('Login failed:', err);
     }

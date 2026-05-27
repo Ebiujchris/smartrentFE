@@ -41,16 +41,17 @@ export const tenantRegistrationService = {
 
     const tenant = tenantResponse.data;
     const tenantId = tenant.tenantProfile?.id || tenant.id;
+    const userId = tenant.id; // the User row's id for rollback
 
     try {
       // Step 2: Create lease
       const leaseResponse = await api.post('/leases', {
         tenantId,
         unitId: data.unitId,
-        startDate: data.startDate,
-        endDate: data.endDate,
-        rentAmount: data.rentAmount,
-        deposit: data.deposit,
+        startDate: new Date(data.startDate).toISOString(),
+        endDate: new Date(data.endDate).toISOString(),
+        rentAmount: Number(data.rentAmount),
+        deposit: Number(data.deposit),
       });
 
       return {
@@ -59,8 +60,12 @@ export const tenantRegistrationService = {
         success: true,
       };
     } catch (error) {
-      // If lease creation fails, we should ideally rollback tenant creation
-      // For now, just throw the error
+      // Rollback: delete the user we just created so no orphaned tenants pile up
+      try {
+        await api.delete(`/tenants/user/${userId}`);
+      } catch {
+        // Silently ignore rollback failures — backend may already handle cascades
+      }
       throw error;
     }
   },

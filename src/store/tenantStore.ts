@@ -1,13 +1,35 @@
-import { create } from 'zustand';
-import { tenantService, CreateTenantDto, UpdateTenantDto } from '@/services/tenant.service';
+import { create } from "zustand";
+import axios from "axios";
+import {
+  tenantService,
+  CreateTenantDto,
+  UpdateTenantDto,
+  Tenant,
+} from "@/services/tenant.service";
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (axios.isAxiosError(error)) {
+    const apiMessage = error.response?.data?.message;
+
+    if (typeof apiMessage === "string") {
+      return apiMessage;
+    }
+
+    if (Array.isArray(apiMessage)) {
+      return apiMessage.join(", ");
+    }
+  }
+
+  return fallback;
+}
 
 interface TenantStore {
-  tenants: any[];
+  tenants: Tenant[];
   loading: boolean;
   error: string | null;
   fetchTenants: () => Promise<void>;
-  createTenant: (data: CreateTenantDto) => Promise<any>;
-  updateTenant: (id: string, data: UpdateTenantDto) => Promise<any>;
+  createTenant: (data: CreateTenantDto) => Promise<Tenant>;
+  updateTenant: (id: string, data: UpdateTenantDto) => Promise<Tenant>;
   deleteTenant: (id: string) => Promise<void>;
 }
 
@@ -21,8 +43,11 @@ export const useTenantStore = create<TenantStore>((set) => ({
     try {
       const tenants = await tenantService.getAllTenants();
       set({ tenants, loading: false });
-    } catch (error: any) {
-      set({ error: error.message, loading: false });
+    } catch (error: unknown) {
+      set({
+        error: getErrorMessage(error, "Failed to fetch tenants"),
+        loading: false,
+      });
     }
   },
 
@@ -32,8 +57,11 @@ export const useTenantStore = create<TenantStore>((set) => ({
       const tenant = await tenantService.createTenant(data);
       set((state) => ({ tenants: [...state.tenants, tenant], loading: false }));
       return tenant;
-    } catch (error: any) {
-      set({ error: error.message, loading: false });
+    } catch (error: unknown) {
+      set({
+        error: getErrorMessage(error, "Failed to create tenant"),
+        loading: false,
+      });
       throw error;
     }
   },
@@ -47,8 +75,11 @@ export const useTenantStore = create<TenantStore>((set) => ({
         loading: false,
       }));
       return updated;
-    } catch (error: any) {
-      set({ error: error.message, loading: false });
+    } catch (error: unknown) {
+      set({
+        error: getErrorMessage(error, "Failed to update tenant"),
+        loading: false,
+      });
       throw error;
     }
   },
@@ -61,8 +92,11 @@ export const useTenantStore = create<TenantStore>((set) => ({
         tenants: state.tenants.filter((t) => t.id !== id),
         loading: false,
       }));
-    } catch (error: any) {
-      set({ error: error.message, loading: false });
+    } catch (error: unknown) {
+      set({
+        error: getErrorMessage(error, "Failed to delete tenant"),
+        loading: false,
+      });
       throw error;
     }
   },

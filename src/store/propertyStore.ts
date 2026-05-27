@@ -1,5 +1,28 @@
-import { create } from 'zustand';
-import { propertyService, Property, CreatePropertyData, CreateUnitData } from '@/services/property.service';
+import { create } from "zustand";
+import axios from "axios";
+import {
+  propertyService,
+  Property,
+  CreatePropertyData,
+  CreateUnitData,
+  Unit,
+} from "@/services/property.service";
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (axios.isAxiosError(error)) {
+    const apiMessage = error.response?.data?.message;
+
+    if (typeof apiMessage === "string") {
+      return apiMessage;
+    }
+
+    if (Array.isArray(apiMessage)) {
+      return apiMessage.join(", ");
+    }
+  }
+
+  return fallback;
+}
 
 interface PropertyState {
   properties: Property[];
@@ -9,9 +32,12 @@ interface PropertyState {
   fetchProperties: () => Promise<void>;
   fetchProperty: (id: string) => Promise<void>;
   createProperty: (data: CreatePropertyData) => Promise<Property>;
-  updateProperty: (id: string, data: Partial<CreatePropertyData>) => Promise<void>;
+  updateProperty: (
+    id: string,
+    data: Partial<CreatePropertyData>,
+  ) => Promise<void>;
   deleteProperty: (id: string) => Promise<void>;
-  createUnit: (propertyId: string, data: CreateUnitData) => Promise<void>;
+  createUnit: (propertyId: string, data: CreateUnitData) => Promise<Unit>;
   clearError: () => void;
 }
 
@@ -26,9 +52,9 @@ export const usePropertyStore = create<PropertyState>((set, get) => ({
     try {
       const properties = await propertyService.getAll();
       set({ properties, isLoading: false });
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.response?.data?.message || 'Failed to fetch properties',
+        error: getErrorMessage(error, "Failed to fetch properties"),
         isLoading: false,
       });
     }
@@ -39,9 +65,9 @@ export const usePropertyStore = create<PropertyState>((set, get) => ({
     try {
       const property = await propertyService.getOne(id);
       set({ currentProperty: property, isLoading: false });
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.response?.data?.message || 'Failed to fetch property',
+        error: getErrorMessage(error, "Failed to fetch property"),
         isLoading: false,
       });
     }
@@ -56,9 +82,9 @@ export const usePropertyStore = create<PropertyState>((set, get) => ({
         isLoading: false,
       }));
       return property;
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.response?.data?.message || 'Failed to create property',
+        error: getErrorMessage(error, "Failed to create property"),
         isLoading: false,
       });
       throw error;
@@ -73,9 +99,9 @@ export const usePropertyStore = create<PropertyState>((set, get) => ({
         properties: state.properties.map((p) => (p.id === id ? updated : p)),
         isLoading: false,
       }));
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.response?.data?.message || 'Failed to update property',
+        error: getErrorMessage(error, "Failed to update property"),
         isLoading: false,
       });
       throw error;
@@ -90,9 +116,9 @@ export const usePropertyStore = create<PropertyState>((set, get) => ({
         properties: state.properties.filter((p) => p.id !== id),
         isLoading: false,
       }));
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.response?.data?.message || 'Failed to delete property',
+        error: getErrorMessage(error, "Failed to delete property"),
         isLoading: false,
       });
       throw error;
@@ -107,9 +133,9 @@ export const usePropertyStore = create<PropertyState>((set, get) => ({
       await get().fetchProperties();
       set({ isLoading: false });
       return newUnit;
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.response?.data?.message || 'Failed to create unit',
+        error: getErrorMessage(error, "Failed to create unit"),
         isLoading: false,
       });
       throw error;

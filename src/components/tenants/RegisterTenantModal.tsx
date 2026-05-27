@@ -1,14 +1,23 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, User, FileText, Key } from 'lucide-react';
-import { tenantRegistrationService, RegisterTenantData } from '@/services/tenant-registration.service';
-import { toast } from 'sonner';
+import { useEffect, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, User, FileText, Key, Copy, CheckCircle } from "lucide-react";
+import {
+  tenantRegistrationService,
+  RegisterTenantData,
+} from "@/services/tenant-registration.service";
+import { toast } from "sonner";
 
 interface RegisterTenantModalProps {
   open: boolean;
@@ -19,7 +28,7 @@ interface RegisterTenantModalProps {
     rentAmount: number;
     propertyName: string;
   };
-  onSuccess: () => void;
+  onSuccess: () => void | Promise<void>;
 }
 
 export default function RegisterTenantModal({
@@ -36,10 +45,24 @@ export default function RegisterTenantModal({
     createAccount: true,
     deposit: unit.rentAmount, // Default deposit = 1 month rent
   });
+  const [successData, setSuccessData] = useState<{
+    email: string;
+    password?: string;
+  } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setFormData({
+      unitId: unit.id,
+      rentAmount: Number(unit.rentAmount),
+      createAccount: true,
+      deposit: Number(unit.rentAmount),
+    });
+  }, [unit.id, unit.rentAmount]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (step < 3) {
       setStep(step + 1);
       return;
@@ -47,27 +70,37 @@ export default function RegisterTenantModal({
 
     setIsLoading(true);
     try {
-      await tenantRegistrationService.registerTenant(formData as RegisterTenantData);
-      
-      toast.success('Tenant registered successfully!', {
+      let finalPassword = formData.password;
+      if (formData.createAccount && !finalPassword) {
+        finalPassword = tenantRegistrationService.generatePassword();
+      }
+
+      const submissionData = {
+        ...formData,
+        password: finalPassword,
+      } as RegisterTenantData;
+
+      await tenantRegistrationService.registerTenant(submissionData);
+
+      toast.success("Tenant registered successfully!", {
         description: `${formData.fullName} has been registered to Unit ${unit.unitNumber}`,
       });
-      
-      onOpenChange(false);
-      onSuccess();
-      
-      // Reset form
-      setStep(1);
-      setFormData({
-        unitId: unit.id,
-        rentAmount: unit.rentAmount,
-        createAccount: true,
-        deposit: unit.rentAmount,
+
+      setSuccessData({
+        email: formData.email as string,
+        password: finalPassword,
       });
+      setStep(4); // Move to success step
+      await onSuccess();
     } catch (error: any) {
-      console.error('Failed to register tenant:', error);
-      toast.error('Failed to register tenant', {
-        description: error.response?.data?.message || 'Please check the information and try again.',
+      console.error("Failed to register tenant:", error);
+      const apiMessage = error.response?.data?.message;
+      const description = Array.isArray(apiMessage)
+        ? apiMessage.join(", ")
+        : apiMessage || "Please check the information and try again.";
+
+      toast.error("Failed to register tenant", {
+        description,
       });
     } finally {
       setIsLoading(false);
@@ -75,42 +108,76 @@ export default function RegisterTenantModal({
   };
 
   const handleBack = () => {
-    if (step > 1) setStep(step - 1);
+    if (step > 1 && step < 4) setStep(step - 1);
+  };
+
+  const copyCredentials = () => {
+    if (!successData) return;
+    const text = `Hello ${formData.fullName},\n\nYour tenant portal account has been created.\n\nPortal: ${window.location.origin}/login\nEmail: ${successData.email}\nPasscode: ${successData.password}\n\nPlease login to view your lease and make payments.`;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast.success("Credentials copied to clipboard");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleClose = () => {
+    onOpenChange(false);
+    setTimeout(() => {
+      setStep(1);
+      setFormData({
+        unitId: unit.id,
+        rentAmount: unit.rentAmount,
+        createAccount: true,
+        deposit: unit.rentAmount,
+      });
+      setSuccessData(null);
+    }, 300);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent
+        className="max-w-2xl max-h-[90vh] overflow-y-auto"
+        aria-describedby={undefined}
+      >
         <DialogHeader>
           <DialogTitle className="text-2xl">
-            Register Tenant - Unit {unit.unitNumber}
+            {step === 4
+              ? "Registration Successful!"
+              : `Register Tenant - Unit ${unit.unitNumber}`}
           </DialogTitle>
-          <p className="text-sm text-slate-600">{unit.propertyName}</p>
+          <DialogDescription className="text-sm text-slate-600">
+            {step === 4
+              ? "The tenant has been registered and an account has been created."
+              : unit.propertyName}
+          </DialogDescription>
         </DialogHeader>
 
         {/* Progress Steps */}
-        <div className="flex items-center justify-between mb-6">
-          {[1, 2, 3].map((s) => (
-            <div key={s} className="flex items-center flex-1">
-              <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
-                  step >= s
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-slate-200 text-slate-500'
-                }`}
-              >
-                {s}
-              </div>
-              {s < 3 && (
+        {step < 4 && (
+          <div className="flex items-center justify-between mb-6">
+            {[1, 2, 3].map((s) => (
+              <div key={s} className="flex items-center flex-1">
                 <div
-                  className={`flex-1 h-1 mx-2 ${
-                    step > s ? 'bg-emerald-500' : 'bg-slate-200'
+                  className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
+                    step >= s
+                      ? "bg-emerald-500 text-white"
+                      : "bg-slate-200 text-slate-500"
                   }`}
-                />
-              )}
-            </div>
-          ))}
-        </div>
+                >
+                  {s}
+                </div>
+                {s < 3 && (
+                  <div
+                    className={`flex-1 h-1 mx-2 ${
+                      step > s ? "bg-emerald-500" : "bg-slate-200"
+                    }`}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Step 1: Tenant Information */}
@@ -126,8 +193,10 @@ export default function RegisterTenantModal({
                   <Label htmlFor="fullName">Full Name *</Label>
                   <Input
                     id="fullName"
-                    value={formData.fullName || ''}
-                    onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                    value={formData.fullName || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, fullName: e.target.value })
+                    }
                     placeholder="John Doe"
                     required
                     className="mt-1"
@@ -139,8 +208,10 @@ export default function RegisterTenantModal({
                   <Input
                     id="email"
                     type="email"
-                    value={formData.email || ''}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    value={formData.email || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
                     placeholder="john@example.com"
                     required
                     className="mt-1"
@@ -152,8 +223,10 @@ export default function RegisterTenantModal({
                   <Input
                     id="phone"
                     type="tel"
-                    value={formData.phone || ''}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    value={formData.phone || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phone: e.target.value })
+                    }
                     placeholder="+256 700 000000"
                     className="mt-1"
                   />
@@ -163,8 +236,10 @@ export default function RegisterTenantModal({
                   <Label htmlFor="nationalId">National ID / Passport</Label>
                   <Input
                     id="nationalId"
-                    value={formData.nationalId || ''}
-                    onChange={(e) => setFormData({ ...formData, nationalId: e.target.value })}
+                    value={formData.nationalId || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, nationalId: e.target.value })
+                    }
                     placeholder="CM12345678"
                     className="mt-1"
                   />
@@ -174,8 +249,10 @@ export default function RegisterTenantModal({
                   <Label htmlFor="occupation">Occupation</Label>
                   <Input
                     id="occupation"
-                    value={formData.occupation || ''}
-                    onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
+                    value={formData.occupation || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, occupation: e.target.value })
+                    }
                     placeholder="Software Engineer"
                     className="mt-1"
                   />
@@ -185,8 +262,13 @@ export default function RegisterTenantModal({
                   <Label htmlFor="emergencyContact">Emergency Contact</Label>
                   <Input
                     id="emergencyContact"
-                    value={formData.emergencyContact || ''}
-                    onChange={(e) => setFormData({ ...formData, emergencyContact: e.target.value })}
+                    value={formData.emergencyContact || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        emergencyContact: e.target.value,
+                      })
+                    }
                     placeholder="Jane Doe - +256 700 111111"
                     className="mt-1"
                   />
@@ -209,8 +291,10 @@ export default function RegisterTenantModal({
                   <Input
                     id="startDate"
                     type="date"
-                    value={formData.startDate || ''}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    value={formData.startDate || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, startDate: e.target.value })
+                    }
                     required
                     className="mt-1"
                   />
@@ -221,8 +305,10 @@ export default function RegisterTenantModal({
                   <Input
                     id="endDate"
                     type="date"
-                    value={formData.endDate || ''}
-                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                    value={formData.endDate || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, endDate: e.target.value })
+                    }
                     required
                     className="mt-1"
                   />
@@ -233,8 +319,13 @@ export default function RegisterTenantModal({
                   <Input
                     id="rentAmount"
                     type="number"
-                    value={formData.rentAmount || ''}
-                    onChange={(e) => setFormData({ ...formData, rentAmount: parseFloat(e.target.value) })}
+                    value={formData.rentAmount || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        rentAmount: parseFloat(e.target.value),
+                      })
+                    }
                     required
                     className="mt-1"
                   />
@@ -245,8 +336,13 @@ export default function RegisterTenantModal({
                   <Input
                     id="deposit"
                     type="number"
-                    value={formData.deposit || ''}
-                    onChange={(e) => setFormData({ ...formData, deposit: parseFloat(e.target.value) })}
+                    value={formData.deposit || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        deposit: parseFloat(e.target.value),
+                      })
+                    }
                     required
                     className="mt-1"
                   />
@@ -259,8 +355,13 @@ export default function RegisterTenantModal({
                     type="number"
                     min="1"
                     max="31"
-                    value={formData.paymentDueDay || ''}
-                    onChange={(e) => setFormData({ ...formData, paymentDueDay: parseInt(e.target.value) })}
+                    value={formData.paymentDueDay || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        paymentDueDay: parseInt(e.target.value),
+                      })
+                    }
                     placeholder="e.g., 1 for 1st of month"
                     className="mt-1"
                   />
@@ -282,7 +383,8 @@ export default function RegisterTenantModal({
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <p className="text-sm text-blue-900">
-                  Create a portal account for the tenant to view payments, submit maintenance requests, and manage their lease online.
+                  Create a portal account for the tenant to view payments,
+                  submit maintenance requests, and manage their lease online.
                 </p>
               </div>
 
@@ -291,11 +393,15 @@ export default function RegisterTenantModal({
                   id="createAccount"
                   checked={formData.createAccount}
                   onCheckedChange={(checked) =>
-                    setFormData({ ...formData, createAccount: checked as boolean })
+                    setFormData({
+                      ...formData,
+                      createAccount: checked as boolean,
+                    })
                   }
                 />
                 <Label htmlFor="createAccount" className="cursor-pointer">
-                  Create tenant portal account and send login credentials via email
+                  Create tenant portal account and send login credentials via
+                  email
                 </Label>
               </div>
 
@@ -306,13 +412,16 @@ export default function RegisterTenantModal({
                     <Input
                       id="password"
                       type="text"
-                      value={formData.password || ''}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      value={formData.password || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, password: e.target.value })
+                      }
                       placeholder="Leave blank to auto-generate"
                       className="mt-1"
                     />
                     <p className="text-xs text-slate-500 mt-1">
-                      If left blank, a secure password will be generated automatically
+                      If left blank, a secure password will be generated
+                      automatically
                     </p>
                   </div>
                 </div>
@@ -320,20 +429,24 @@ export default function RegisterTenantModal({
 
               {/* Summary */}
               <div className="bg-slate-50 rounded-lg p-4 mt-6 space-y-2">
-                <h4 className="font-semibold text-slate-900 mb-3">Registration Summary</h4>
+                <h4 className="font-semibold text-slate-900 mb-3">
+                  Registration Summary
+                </h4>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <span className="text-slate-600">Tenant:</span>
                   <span className="font-medium">{formData.fullName}</span>
-                  
+
                   <span className="text-slate-600">Email:</span>
                   <span className="font-medium">{formData.email}</span>
-                  
+
                   <span className="text-slate-600">Unit:</span>
                   <span className="font-medium">{unit.unitNumber}</span>
-                  
+
                   <span className="text-slate-600">Monthly Rent:</span>
-                  <span className="font-medium">UGX {formData.rentAmount?.toLocaleString()}</span>
-                  
+                  <span className="font-medium">
+                    UGX {formData.rentAmount?.toLocaleString()}
+                  </span>
+
                   <span className="text-slate-600">Lease Period:</span>
                   <span className="font-medium">
                     {formData.startDate} to {formData.endDate}
@@ -343,9 +456,72 @@ export default function RegisterTenantModal({
             </div>
           )}
 
+          {/* Step 4: Success Screen */}
+          {step === 4 && successData && (
+            <div className="py-6 space-y-6 flex flex-col items-center justify-center text-center">
+              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
+                <CheckCircle className="h-8 w-8 text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">
+                  Tenant Portal Account Created
+                </h3>
+                <p className="text-slate-600 max-w-md">
+                  Share these credentials with the tenant so they can log in to
+                  their dashboard.
+                </p>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 w-full max-w-md text-left space-y-4">
+                <div>
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                    Portal Login Link
+                  </Label>
+                  <div className="font-medium text-slate-900 mt-1">
+                    {typeof window !== "undefined"
+                      ? `${window.location.origin}/login`
+                      : "/login"}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                    Email / Username
+                  </Label>
+                  <div className="font-medium text-slate-900 mt-1">
+                    {successData.email}
+                  </div>
+                </div>
+                {successData.password && (
+                  <div>
+                    <Label className="text-slate-500 text-xs uppercase tracking-wider">
+                      Generated Passcode
+                    </Label>
+                    <div className="font-mono text-lg font-bold text-slate-900 mt-1 tracking-wider bg-white border border-slate-200 rounded p-2 text-center">
+                      {successData.password}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <Button
+                type="button"
+                onClick={copyCredentials}
+                className="w-full max-w-md gap-2"
+                variant={copied ? "outline" : "default"}
+              >
+                {copied ? (
+                  <CheckCircle className="h-4 w-4 text-emerald-500" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+                {copied ? "Copied to Clipboard!" : "Copy Details to Share"}
+              </Button>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex gap-3 pt-4 border-t">
-            {step > 1 && (
+            {step > 1 && step < 4 && (
               <Button
                 type="button"
                 onClick={handleBack}
@@ -358,29 +534,31 @@ export default function RegisterTenantModal({
             )}
             <Button
               type="button"
-              onClick={() => onOpenChange(false)}
+              onClick={handleClose}
               variant="outline"
-              className="flex-1"
+              className={step === 4 ? "w-full" : "flex-1"}
               disabled={isLoading}
             >
-              Cancel
+              {step === 4 ? "Close" : "Cancel"}
             </Button>
-            <Button
-              type="submit"
-              className="flex-1 bg-emerald-500 hover:bg-emerald-600"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : step < 3 ? (
-                'Next'
-              ) : (
-                'Register Tenant'
-              )}
-            </Button>
+            {step < 4 && (
+              <Button
+                type="submit"
+                className="flex-1 bg-emerald-500 hover:bg-emerald-600"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : step < 3 ? (
+                  "Next"
+                ) : (
+                  "Register Tenant"
+                )}
+              </Button>
+            )}
           </div>
         </form>
       </DialogContent>

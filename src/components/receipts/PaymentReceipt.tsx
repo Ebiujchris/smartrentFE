@@ -1,15 +1,27 @@
-'use client';
+"use client";
 
-import { useRef } from 'react';
-import { Building2, Calendar, CreditCard, User, MapPin, FileText, Download, Printer } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useRef } from "react";
+import {
+  Building2,
+  Calendar,
+  CreditCard,
+  User,
+  MapPin,
+  FileText,
+  Download,
+  Printer,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface PaymentReceiptProps {
   payment: any;
   onClose: () => void;
 }
 
-export default function PaymentReceipt({ payment, onClose }: PaymentReceiptProps) {
+export default function PaymentReceipt({
+  payment,
+  onClose,
+}: PaymentReceiptProps) {
   const receiptRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = () => {
@@ -22,10 +34,10 @@ export default function PaymentReceipt({ payment, onClose }: PaymentReceiptProps
   };
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+    return new Date(date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
@@ -68,7 +80,9 @@ export default function PaymentReceipt({ payment, onClose }: PaymentReceiptProps
 
           {/* Receipt Title */}
           <div className="text-center mb-8 pb-4 border-b-2 border-slate-200">
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">PAYMENT RECEIPT</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">
+              PAYMENT RECEIPT
+            </h2>
             <p className="text-slate-600">Receipt No: {receiptNumber}</p>
           </div>
 
@@ -81,7 +95,9 @@ export default function PaymentReceipt({ payment, onClose }: PaymentReceiptProps
                   <User className="h-4 w-4" />
                   <span>Tenant Name</span>
                 </div>
-                <p className="font-semibold text-slate-900">{payment.tenant.user.fullName}</p>
+                <p className="font-semibold text-slate-900">
+                  {payment.tenant.user.fullName}
+                </p>
               </div>
 
               <div>
@@ -89,7 +105,9 @@ export default function PaymentReceipt({ payment, onClose }: PaymentReceiptProps
                   <Building2 className="h-4 w-4" />
                   <span>Property</span>
                 </div>
-                <p className="font-semibold text-slate-900">{payment.lease.unit.property.name}</p>
+                <p className="font-semibold text-slate-900">
+                  {payment.lease.unit.property.name}
+                </p>
               </div>
 
               <div>
@@ -97,7 +115,9 @@ export default function PaymentReceipt({ payment, onClose }: PaymentReceiptProps
                   <MapPin className="h-4 w-4" />
                   <span>Unit Number</span>
                 </div>
-                <p className="font-semibold text-slate-900">Unit {payment.lease.unit.unitNumber}</p>
+                <p className="font-semibold text-slate-900">
+                  Unit {payment.lease.unit.unitNumber}
+                </p>
               </div>
             </div>
 
@@ -109,7 +129,9 @@ export default function PaymentReceipt({ payment, onClose }: PaymentReceiptProps
                   <span>Payment Date</span>
                 </div>
                 <p className="font-semibold text-slate-900">
-                  {payment.paidDate ? formatDate(payment.paidDate) : formatDate(payment.createdAt)}
+                  {payment.paidDate
+                    ? formatDate(payment.paidDate)
+                    : formatDate(payment.createdAt)}
                 </p>
               </div>
 
@@ -119,7 +141,21 @@ export default function PaymentReceipt({ payment, onClose }: PaymentReceiptProps
                   <span>Payment Method</span>
                 </div>
                 <p className="font-semibold text-slate-900">
-                  {payment.method?.replace('_', ' ') || 'N/A'}
+                  {payment.method?.replace("_", " ") || "N/A"}
+                </p>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
+                  <FileText className="h-4 w-4" />
+                  <span>Payment Source</span>
+                </div>
+                <p className="font-semibold text-slate-900">
+                  {payment.notes?.includes("SOURCE:TENANT_PORTAL")
+                    ? "Tenant Portal"
+                    : payment.notes?.includes("SOURCE:MANUAL_CLEARANCE")
+                      ? "Manual Clearance"
+                      : "Recorded Payment"}
                 </p>
               </div>
 
@@ -129,7 +165,9 @@ export default function PaymentReceipt({ payment, onClose }: PaymentReceiptProps
                     <FileText className="h-4 w-4" />
                     <span>Reference</span>
                   </div>
-                  <p className="font-semibold text-slate-900">{payment.reference}</p>
+                  <p className="font-semibold text-slate-900">
+                    {payment.reference}
+                  </p>
                 </div>
               )}
             </div>
@@ -137,7 +175,9 @@ export default function PaymentReceipt({ payment, onClose }: PaymentReceiptProps
 
           {/* Payment Breakdown */}
           <div className="bg-slate-50 rounded-lg p-6 mb-8">
-            <h3 className="font-semibold text-slate-900 mb-4">Payment Details</h3>
+            <h3 className="font-semibold text-slate-900 mb-4">
+              Payment Details
+            </h3>
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-slate-600">Rent Amount</span>
@@ -156,12 +196,16 @@ export default function PaymentReceipt({ payment, onClose }: PaymentReceiptProps
 
           {/* Property Address */}
           <div className="mb-8">
-            <h3 className="font-semibold text-slate-900 mb-2">Property Address</h3>
-            <p className="text-slate-600">{payment.lease.unit.property.address || 'N/A'}</p>
+            <h3 className="font-semibold text-slate-900 mb-2">
+              Property Address
+            </h3>
+            <p className="text-slate-600">
+              {payment.lease.unit.property.address || "N/A"}
+            </p>
           </div>
 
           {/* Notes */}
-          {payment.notes && (
+          {payment.notes && !payment.notes.startsWith("SOURCE:") && (
             <div className="mb-8">
               <h3 className="font-semibold text-slate-900 mb-2">Notes</h3>
               <p className="text-slate-600">{payment.notes}</p>
@@ -171,9 +215,14 @@ export default function PaymentReceipt({ payment, onClose }: PaymentReceiptProps
           {/* Footer */}
           <div className="border-t-2 border-slate-200 pt-6 mt-8">
             <div className="text-center text-sm text-slate-500">
-              <p className="mb-2">This is a computer-generated receipt and does not require a signature.</p>
+              <p className="mb-2">
+                This is a computer-generated receipt and does not require a
+                signature.
+              </p>
               <p>For any queries, please contact your property manager.</p>
-              <p className="mt-4 font-semibold text-slate-900">Thank you for your payment!</p>
+              <p className="mt-4 font-semibold text-slate-900">
+                Thank you for your payment!
+              </p>
             </div>
           </div>
 
@@ -192,7 +241,8 @@ export default function PaymentReceipt({ payment, onClose }: PaymentReceiptProps
           .print\\:hidden {
             display: none !important;
           }
-          ${receiptRef.current ? `
+          ${receiptRef.current
+            ? `
             #receipt-content,
             #receipt-content * {
               visibility: visible;
@@ -203,7 +253,8 @@ export default function PaymentReceipt({ payment, onClose }: PaymentReceiptProps
               top: 0;
               width: 100%;
             }
-          ` : ''}
+          `
+            : ""}
         }
       `}</style>
     </div>
