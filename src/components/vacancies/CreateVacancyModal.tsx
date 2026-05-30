@@ -158,7 +158,7 @@ export default function CreateVacancyModal({ open, onOpenChange, units, onSucces
               <Label>Select Unit *</Label>
               <Select
                 value={formData.unitId}
-                onValueChange={(val) => setFormData({ ...formData, unitId: val })}
+                onValueChange={(val) => setFormData({ ...formData, unitId: val || "" })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a vacant unit" />
