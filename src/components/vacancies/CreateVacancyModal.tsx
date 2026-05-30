@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,14 @@ export default function CreateVacancyModal({ open, onOpenChange, units, onSucces
     contactEmail: user?.email || "",
     availableFrom: new Date().toISOString().split("T")[0],
   });
+
+  const vacantUnits = units.filter((u) => u.status === "VACANT");
+
+  useEffect(() => {
+    if (open && vacantUnits.length > 0 && !formData.unitId) {
+      setFormData((prev) => ({ ...prev, unitId: vacantUnits[0].id }));
+    }
+  }, [open, vacantUnits, formData.unitId]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -139,8 +147,6 @@ export default function CreateVacancyModal({ open, onOpenChange, units, onSucces
       setIsLoading(false);
     }
   };
-
-  const vacantUnits = units.filter((u) => u.status === "VACANT");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
