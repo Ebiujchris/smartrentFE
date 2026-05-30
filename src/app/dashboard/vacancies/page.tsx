@@ -1,0 +1,197 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Plus, Home, MapPin, Eye, Pencil, Trash2, Loader2, ExternalLink } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { vacantListingService, VacantListing } from "@/services/vacant-listing.service";
+import { propertyService, Property, Unit } from "@/services/property.service";
+import CreateVacancyModal from "@/components/vacancies/CreateVacancyModal";
+import { toast } from "sonner";
+import Link from "next/link";
+
+export default function VacanciesPage() {
+  const [listings, setListings] = useState<VacantListing[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const [listingsData, propertiesData] = await Promise.all([
+        vacantListingService.getMyListings(),
+        propertyService.getAll(),
+      ]);
+      setListings(listingsData);
+      setProperties(propertiesData);
+    } catch (error) {
+      console.error("Failed to fetch data", error);
+      toast.error("Failed to load vacancies");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this advertisement?")) return;
+    
+    setIsDeleting(id);
+    try {
+      await vacantListingService.deleteListing(id);
+      toast.success("Listing removed");
+      setListings((prev) => prev.filter((l) => l.id !== id));
+    } catch (error) {
+      toast.error("Failed to delete listing");
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+
+  // Flatten units from properties and map to the required interface for the modal
+  const allUnits = properties.flatMap((p) => 
+    (p.units || []).map((u) => ({
+      id: u.id,
+      unitNumber: u.unitNumber,
+      rentAmount: Number(u.rentAmount),
+      status: u.status,
+      property: {
+        name: p.name,
+        address: p.address,
+      }
+    }))
+  );
+
+  return (
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Vacancy Advertisements
+          </h1>
+          <p className="text-slate-500">
+            Manage your public listings for vacant units to attract tenants.
+          </p>
+        </div>
+        <Button 
+          onClick={() => setIsModalOpen(true)}
+          className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm"
+        >
+          <Plus className="mr-2 h-4 w-4" /> Advertise Unit
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+        </div>
+      ) : listings.length === 0 ? (
+        <Card className="border-dashed border-2 bg-slate-50/50">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+              <Home className="h-8 w-8 text-slate-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-slate-900 mb-2">
+              No active advertisements
+            </h3>
+            <p className="text-slate-500 max-w-sm mb-6">
+              You haven't created any public listings for your vacant units yet.
+            </p>
+            <Button 
+              onClick={() => setIsModalOpen(true)}
+              variant="outline"
+              className="border-emerald-200 text-emerald-600 hover:bg-emerald-50"
+            >
+              Create Your First Ad
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {listings.map((listing) => (
+            <Card key={listing.id} className="overflow-hidden shadow-sm flex flex-col group border-slate-200 hover:border-emerald-200 hover:shadow-md transition-all">
+              <div className="relative h-48 w-full bg-slate-100 border-b border-slate-100">
+                {listing.images && listing.images.length > 0 ? (
+                  <img
+                    src={listing.images[0]}
+                    alt={listing.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-slate-400">
+                    <Home className="h-10 w-10 opacity-30" />
+                  </div>
+                )}
+                <div className={`absolute top-3 left-3 px-2.5 py-1 text-xs font-semibold rounded-full shadow-sm
+                  ${listing.isActive ? 'bg-emerald-500 text-white' : 'bg-slate-500 text-white'}
+                `}>
+                  {listing.isActive ? 'Active' : 'Inactive'}
+                </div>
+              </div>
+              
+              <CardContent className="p-5 flex-1 flex flex-col">
+                <div className="mb-2">
+                  <h3 className="font-semibold text-slate-900 line-clamp-1">{listing.title}</h3>
+                  <div className="text-sm font-medium text-emerald-600">
+                    UGX {listing.unit.rentAmount.toLocaleString()} / mo
+                  </div>
+                </div>
+                
+                <div className="flex items-center text-slate-500 text-sm mb-4">
+                  <MapPin className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+                  <span className="truncate">{listing.unit.property.address}</span>
+                </div>
+                
+                <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">
+                  <div className="flex items-center text-slate-500 text-sm" title="Total Views">
+                    <Eye className="h-4 w-4 mr-1.5" />
+                    {listing.viewCount} views
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
+                      asChild
+                    >
+                      <Link href={`/houses-for-rent`} target="_blank">
+                        <ExternalLink className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                      onClick={() => handleDelete(listing.id)}
+                      disabled={isDeleting === listing.id}
+                    >
+                      {isDeleting === listing.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {isModalOpen && (
+        <CreateVacancyModal
+          open={isModalOpen}
+          onOpenChange={setIsModalOpen}
+          units={allUnits}
+          onSuccess={fetchData}
+        />
+      )}
+    </div>
+  );
+}

@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
-import Sidebar from '@/components/dashboard/Sidebar';
-import Navbar from '@/components/dashboard/Navbar';
-import ToastProvider from '@/components/providers/ToastProvider';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/authStore";
+import Sidebar, { SidebarProvider } from "@/components/dashboard/Sidebar";
+import Navbar from "@/components/dashboard/Navbar";
+import ToastProvider from "@/components/providers/ToastProvider";
 
 export default function DashboardLayout({
   children,
@@ -22,7 +22,7 @@ export default function DashboardLayout({
 
   useEffect(() => {
     if (mounted && (!token || !user)) {
-      router.push('/login');
+      router.push("/login");
     }
   }, [token, user, router, mounted]);
 
@@ -46,16 +46,18 @@ export default function DashboardLayout({
   return (
     <>
       <ToastProvider />
-      <div className="flex min-h-screen bg-slate-50">
-        <Sidebar />
-        
-        <div className="flex flex-col flex-1">
-          <Navbar />
-          <main className="p-6 space-y-6 flex-1">
-            {children}
-          </main>
+      <SidebarProvider>
+        <div className="flex min-h-screen bg-slate-50">
+          <Sidebar />
+
+          <div className="flex flex-col flex-1 min-w-0">
+            <Navbar />
+            <main className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-5 lg:space-y-6 flex-1">
+              {children}
+            </main>
+          </div>
         </div>
-      </div>
+      </SidebarProvider>
     </>
   );
 }

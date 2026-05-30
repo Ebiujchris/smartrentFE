@@ -1,90 +1,162 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  CreditCard, 
-  Wrench,
-  LogOut,
-  Bell
-} from 'lucide-react';
-import { useAuthStore } from '@/store/authStore';
+import { useState, createContext, useContext } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { LayoutDashboard, CreditCard, Wrench, LogOut, X } from "lucide-react";
+import { useAuthStore } from "@/store/authStore";
+
+// Create context for mobile menu state
+const TenantSidebarContext = createContext<{
+  isMobileMenuOpen: boolean;
+  toggleMobileMenu: () => void;
+}>({
+  isMobileMenuOpen: false,
+  toggleMobileMenu: () => {},
+});
+
+export const useTenantSidebar = () => useContext(TenantSidebarContext);
+
+export function TenantSidebarProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen((prev) => !prev);
+  };
+
+  return (
+    <TenantSidebarContext.Provider
+      value={{ isMobileMenuOpen, toggleMobileMenu }}
+    >
+      {children}
+    </TenantSidebarContext.Provider>
+  );
+}
 
 export default function TenantSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { logout } = useAuthStore();
+  const { isMobileMenuOpen, toggleMobileMenu } = useTenantSidebar();
 
   const handleLogout = () => {
     logout();
-    router.push('/login');
+    router.push("/login");
+  };
+
+  const handleLinkClick = () => {
+    // Close mobile menu when a link is clicked
+    if (isMobileMenuOpen) {
+      toggleMobileMenu();
+    }
   };
 
   const menuItems = [
     {
-      title: 'Overview',
-      icon: <LayoutDashboard className="h-5 w-5" />,
-      path: '/tenant-dashboard',
+      title: "Overview",
+      icon: LayoutDashboard,
+      path: "/tenant-dashboard",
     },
     {
-      title: 'Payments',
-      icon: <CreditCard className="h-5 w-5" />,
-      path: '/tenant-dashboard/payments',
+      title: "Payments",
+      icon: CreditCard,
+      path: "/tenant-dashboard/payments",
     },
     {
-      title: 'Maintenance',
-      icon: <Wrench className="h-5 w-5" />,
-      path: '/tenant-dashboard/maintenance',
+      title: "Maintenance",
+      icon: Wrench,
+      path: "/tenant-dashboard/maintenance",
     },
   ];
 
   return (
-    <div className="w-64 bg-slate-900 text-slate-300 flex flex-col h-screen fixed left-0 top-0">
-      {/* Logo */}
-      <div className="h-16 flex items-center px-6 bg-slate-950">
-        <Link href="/tenant-dashboard" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-xl">S</span>
-          </div>
-          <span className="text-white font-bold text-xl tracking-tight">SmartRent</span>
-        </Link>
-      </div>
+    <>
+      {/* Backdrop overlay for mobile */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={toggleMobileMenu}
+          aria-hidden="true"
+        />
+      )}
 
-      {/* Navigation */}
-      <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-        <div className="mb-4 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-          Tenant Portal
+      {/* Sidebar */}
+      <aside
+        className={`
+          fixed lg:sticky top-0 h-screen w-64 bg-slate-900 text-white flex flex-col
+          z-50 transition-transform duration-300 ease-in-out
+          ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+        `}
+      >
+        {/* Logo */}
+        <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+          <Link
+            href="/tenant-dashboard"
+            className="flex items-center gap-2"
+            onClick={handleLinkClick}
+          >
+            <div className="bg-emerald-500 p-1.5 rounded-md">
+              <LayoutDashboard className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-xl font-bold">SmartRent</span>
+          </Link>
+
+          {/* Close button for mobile */}
+          <button
+            onClick={toggleMobileMenu}
+            className="lg:hidden p-2 hover:bg-slate-800 rounded-lg transition-colors"
+            aria-label="Close menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
-        {menuItems.map((item) => {
-          const isActive = pathname === item.path;
-          return (
-            <Link
-              key={item.path}
-              href={item.path}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                isActive 
-                  ? 'bg-emerald-500/10 text-emerald-400 font-medium' 
-                  : 'hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              {item.icon}
-              {item.title}
-            </Link>
-          );
-        })}
-      </nav>
 
-      {/* Bottom Actions */}
-      <div className="p-4 border-t border-slate-800">
-        <button 
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg hover:bg-slate-800 hover:text-white transition-colors text-left"
-        >
-          <LogOut className="h-5 w-5" />
-          Logout
-        </button>
-      </div>
-    </div>
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          <div className="mb-4 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            Tenant Portal
+          </div>
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                href={item.path}
+                onClick={handleLinkClick}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
+                  isActive
+                    ? "bg-emerald-500/10 text-emerald-400 border-l-3 border-emerald-500"
+                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                }`}
+              >
+                <Icon className="h-5 w-5 flex-shrink-0" />
+                <span className="font-medium">{item.title}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Bottom Actions */}
+        <div className="p-4 border-t border-slate-800">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg hover:bg-slate-800 hover:text-white transition-all text-slate-300 text-left"
+          >
+            <LogOut className="h-5 w-5 flex-shrink-0" />
+            <span className="font-medium">Logout</span>
+          </button>
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 text-xs text-slate-500 border-t border-slate-800 text-center">
+          © 2026 SmartRent
+        </div>
+      </aside>
+    </>
   );
 }

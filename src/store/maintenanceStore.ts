@@ -1,5 +1,9 @@
-import { create } from 'zustand';
-import { maintenanceService, CreateMaintenanceDto, UpdateMaintenanceDto } from '@/services/maintenance.service';
+import { create } from "zustand";
+import {
+  maintenanceService,
+  CreateMaintenanceDto,
+  UpdateMaintenanceDto,
+} from "@/services/maintenance.service";
 
 interface MaintenanceStore {
   requests: any[];
@@ -10,6 +14,7 @@ interface MaintenanceStore {
   updateRequest: (id: string, data: UpdateMaintenanceDto) => Promise<any>;
   updateStatus: (id: string, status: string, notes?: string) => Promise<any>;
   deleteRequest: (id: string) => Promise<void>;
+  reset: () => void; // Add reset method for security
 }
 
 export const useMaintenanceStore = create<MaintenanceStore>((set) => ({
@@ -31,7 +36,10 @@ export const useMaintenanceStore = create<MaintenanceStore>((set) => ({
     set({ loading: true, error: null });
     try {
       const request = await maintenanceService.createRequest(data);
-      set((state) => ({ requests: [...state.requests, request], loading: false }));
+      set((state) => ({
+        requests: [...state.requests, request],
+        loading: false,
+      }));
       return request;
     } catch (error: any) {
       set({ error: error.message, loading: false });
@@ -81,5 +89,15 @@ export const useMaintenanceStore = create<MaintenanceStore>((set) => ({
       set({ error: error.message, loading: false });
       throw error;
     }
+  },
+
+  // SECURITY: Reset method to clear all data on logout
+  reset: () => {
+    console.log("[MaintenanceStore] Resetting all maintenance data");
+    set({
+      requests: [],
+      loading: false,
+      error: null,
+    });
   },
 }));

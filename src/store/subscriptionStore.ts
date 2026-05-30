@@ -1,5 +1,8 @@
-import { create } from 'zustand';
-import { subscriptionService, UpdateSubscriptionDto } from '@/services/subscription.service';
+import { create } from "zustand";
+import {
+  subscriptionService,
+  UpdateSubscriptionDto,
+} from "@/services/subscription.service";
 
 interface SubscriptionStore {
   subscription: any | null;
@@ -9,6 +12,7 @@ interface SubscriptionStore {
   fetchSubscription: () => Promise<void>;
   updateSubscription: (data: UpdateSubscriptionDto) => Promise<any>;
   fetchTrialStatus: () => Promise<void>;
+  reset: () => void; // Add reset method for security
 }
 
 export const useSubscriptionStore = create<SubscriptionStore>((set) => ({
@@ -47,5 +51,16 @@ export const useSubscriptionStore = create<SubscriptionStore>((set) => ({
     } catch (error: any) {
       set({ error: error.message, loading: false });
     }
+  },
+
+  // SECURITY: Reset method to clear all data on logout
+  reset: () => {
+    console.log("[SubscriptionStore] Resetting all subscription data");
+    set({
+      subscription: null,
+      trialStatus: null,
+      loading: false,
+      error: null,
+    });
   },
 }));

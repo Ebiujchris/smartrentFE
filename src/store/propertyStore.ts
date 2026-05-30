@@ -24,7 +24,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-interface PropertyState {
+interface PropertyStore {
   properties: Property[];
   currentProperty: Property | null;
   isLoading: boolean;
@@ -39,9 +39,10 @@ interface PropertyState {
   deleteProperty: (id: string) => Promise<void>;
   createUnit: (propertyId: string, data: CreateUnitData) => Promise<Unit>;
   clearError: () => void;
+  reset: () => void; // Add reset method for security
 }
 
-export const usePropertyStore = create<PropertyState>((set, get) => ({
+export const usePropertyStore = create<PropertyStore>((set, get) => ({
   properties: [],
   currentProperty: null,
   isLoading: false,
@@ -143,4 +144,15 @@ export const usePropertyStore = create<PropertyState>((set, get) => ({
   },
 
   clearError: () => set({ error: null }),
+
+  // SECURITY: Reset method to clear all data on logout
+  reset: () => {
+    console.log("[PropertyStore] Resetting all property data");
+    set({
+      properties: [],
+      currentProperty: null,
+      isLoading: false,
+      error: null,
+    });
+  },
 }));

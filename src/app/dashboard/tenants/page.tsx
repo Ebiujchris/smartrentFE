@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import type { Tenant } from "@/services/tenant.service";
+import { paymentService } from "@/services/payment.service";
 import PaymentReceipt from "@/components/receipts/PaymentReceipt";
 
 interface TenantLeaseInfo {
@@ -108,15 +109,17 @@ export default function TenantsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Payment management state
-  const { payments, fetchPayments, recordPayment } = usePaymentStore();
-  const [isPaymentsOpen, setIsPaymentsOpen] = useState(false);
-  const [selectedTenantForPayments, setSelectedTenantForPayments] =
+  const { payments, fetchPayments, recordPayment, createPayment } =
+    usePaymentStore();
+  const [isMarkPaidOpen, setIsMarkPaidOpen] = useState(false);
+  const [selectedTenantForPayment, setSelectedTenantForPayment] =
     useState<TenantItem | null>(null);
-  const [isRecordOpen, setIsRecordOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
   const [showReceipt, setShowReceipt] = useState(false);
   const [receiptPayment, setReceiptPayment] = useState<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [recordData, setRecordData] = useState({
+    amount: "",
     method: "CASH",
     reference: "",
     notes: "",
@@ -124,7 +127,8 @@ export default function TenantsPage() {
 
   useEffect(() => {
     fetchTenants();
-  }, [fetchTenants]);
+    fetchPayments(); // Fetch payments to show status
+  }, [fetchTenants, fetchPayments]);
 
   const typedTenants = tenants as TenantItem[];
 
@@ -277,49 +281,40 @@ export default function TenantsPage() {
     }
   };
 
-  // Payment management functions
-  const handleViewPayments = async (tenant: TenantItem) => {
-    try {
-      setSelectedTenantForPayments(tenant);
-      setIsPaymentsOpen(true);
-      // Fetch payments first
-      await fetchPayments();
-      console.log("All payments:", payments.length);
-      console.log("Tenant ID:", tenant.id);
-    } catch (error) {
-      console.error("Error loading payments:", error);
-      toast.error("Failed to load payments", {
-        description: "Please try again",
-      });
-    }
+  // Get the next unpaid payment for a tenant
+  const getNextUnpaidPayment = (tenantId: string) => {
+    const tenantPayments = payments.filter(
+      (payment: any) =>
+        payment.tenant?.id === tenantId && payment.status !== "PAID",
+    );
+
+    if (tenantPayments.length === 0) return null;
+
+    // Sort by due date and get the earliest
+    return tenantPayments.sort(
+      (a: any, b: any) =>
+        new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
+    )[0];
   };
 
-  const getTenantPayments = () => {
-    if (!selectedTenantForPayments) {
-      console.log("No tenant selected");
-      return [];
-    }
+  // Handle marking existing payment as paid
+  const handleMarkAsPaid = (payment: any) => {
+    setSelectedPayment(payment);
+    setIsCreatingNew(false);
+    setIsMarkPaidOpen(true);
+  };
 
-    const filtered = payments.filter((payment: any) => {
-      // eslint-disable-line @typescript-eslint/no-explicit-any
-      console.log(
-        "Comparing:",
-        payment.tenant?.id,
-        "with",
-        selectedTenantForPayments.id,
-      );
-      return payment.tenant?.id === selectedTenantForPayments.id;
-    });
-
-    console.log(
-      `Found ${filtered.length} payments for tenant ${selectedTenantForPayments.user.fullName}`,
-    );
-    return filtered;
+  // Handle creating a new payment (for tenants without pending payments)
+  const handleRecordNewPayment = (tenant: TenantItem) => {
+    setSelectedTenantForPayment(tenant);
+    setSelectedPayment(null);
+    setIsCreatingNew(true);
+    setRecordData({ amount: "", method: "CASH", reference: "", notes: "" });
+    setIsMarkPaidOpen(true);
   };
 
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPayment) return;
 
     try {
       const noteValue = recordData.notes?.trim();
@@ -327,18 +322,60 @@ export default function TenantsPage() {
         ? `SOURCE:MANUAL_CLEARANCE\n${noteValue}`
         : "SOURCE:MANUAL_CLEARANCE";
 
-      const updatedPayment = await recordPayment(
-        selectedPayment.id,
-        recordData.method,
-        recordData.reference,
-        combinedNotes,
-      );
-      toast.success("Manual payment clearance recorded!", {
-        description: `UGX ${Number(selectedPayment.amount).toLocaleString()} has been marked as paid.`,
-      });
-      setIsRecordOpen(false);
+      let updatedPayment;
+
+      if (isCreatingNew) {
+        // Creating a new payment
+        if (!selectedTenantForPayment || !recordData.amount) {
+          toast.error("Please enter payment amount");
+          return;
+        }
+
+        const activeLease = selectedTenantForPayment.leases?.[0];
+        if (!activeLease) {
+          toast.error("Tenant must have an active lease to record payment");
+          return;
+        }
+
+        // Create new payment - mark as PAID by immediately recording it
+        const newPayment = await createPayment({
+          leaseId: activeLease.id,
+          tenantId: selectedTenantForPayment.id,
+          amount: parseFloat(recordData.amount),
+          dueDate: new Date().toISOString(),
+        });
+
+        // Now mark it as paid
+        updatedPayment = await recordPayment(
+          newPayment.id,
+          recordData.method,
+          recordData.reference,
+          combinedNotes,
+        );
+
+        toast.success("Payment recorded successfully!", {
+          description: `UGX ${Number(recordData.amount).toLocaleString()} has been recorded for ${selectedTenantForPayment.user.fullName}.`,
+        });
+      } else {
+        // Marking existing payment as paid
+        if (!selectedPayment) return;
+
+        updatedPayment = await recordPayment(
+          selectedPayment.id,
+          recordData.method,
+          recordData.reference,
+          combinedNotes,
+        );
+        toast.success("Payment marked as paid!", {
+          description: `UGX ${Number(selectedPayment.amount).toLocaleString()} has been recorded.`,
+        });
+      }
+
+      setIsMarkPaidOpen(false);
       setSelectedPayment(null);
-      setRecordData({ method: "CASH", reference: "", notes: "" });
+      setSelectedTenantForPayment(null);
+      setIsCreatingNew(false);
+      setRecordData({ amount: "", method: "CASH", reference: "", notes: "" });
 
       // Refresh payments and show receipt
       await fetchPayments();
@@ -352,8 +389,8 @@ export default function TenantsPage() {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleViewReceipt = (payment: any) => {
-    // eslint-disable-line @typescript-eslint/no-explicit-any
     setReceiptPayment(payment);
     setShowReceipt(true);
   };
@@ -390,27 +427,32 @@ export default function TenantsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6 p-4 md:p-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Tenants</h1>
-          <p className="text-slate-600 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
+            Tenants
+          </h1>
+          <p className="text-sm md:text-base text-slate-600 mt-1">
             Manage your tenants like a rent roll
           </p>
         </div>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-emerald-500 hover:bg-emerald-600">
-              <Plus className="h-5 w-5 mr-2" />
+            <Button
+              className="bg-emerald-500 hover:bg-emerald-600 text-sm md:text-base"
+              size="sm"
+            >
+              <Plus className="h-4 w-4 md:h-5 md:w-5 mr-2" />
               Add Tenant
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add New Tenant</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreateSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="fullName">Full Name *</Label>
                   <Input
@@ -511,7 +553,7 @@ export default function TenantsPage() {
       </div>
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Tenant</DialogTitle>
             <DialogDescription>
@@ -520,7 +562,7 @@ export default function TenantsPage() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEditSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="edit-fullName">Full Name *</Label>
                 <Input
@@ -609,7 +651,7 @@ export default function TenantsPage() {
         open={!!tenantToDelete}
         onOpenChange={(open) => !open && setTenantToDelete(null)}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-full sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Delete Tenant</DialogTitle>
             <DialogDescription>
@@ -638,15 +680,15 @@ export default function TenantsPage() {
       </Dialog>
 
       {tenants.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-12">
           <div className="text-center max-w-md mx-auto">
             <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Users className="h-8 w-8 text-purple-600" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">
+            <h2 className="text-xl md:text-2xl font-bold text-slate-900 mb-2">
               No tenants yet
             </h2>
-            <p className="text-slate-600 mb-6">
+            <p className="text-sm md:text-base text-slate-600 mb-6">
               Add tenants to start tracking rent payments and leases
             </p>
             <Button
@@ -660,15 +702,15 @@ export default function TenantsPage() {
         </div>
       ) : (
         <>
-          <div className="bg-gradient-to-r from-emerald-50 via-white to-purple-50 rounded-xl shadow-sm border border-emerald-100 p-4 md:p-5 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className="bg-gradient-to-r from-emerald-50 via-white to-purple-50 rounded-xl shadow-sm border border-emerald-100 p-3 md:p-5 space-y-3 md:space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-2 md:gap-3">
               <div className="relative md:col-span-2">
                 <Search className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <Input
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search tenant, unit, or property"
-                  className="pl-9"
+                  className="pl-9 text-sm md:text-base"
                 />
               </div>
 
@@ -706,15 +748,15 @@ export default function TenantsPage() {
               </Select>
             </div>
 
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between text-sm text-slate-600">
+            <div className="flex flex-col gap-2 md:gap-3 md:flex-row md:items-center md:justify-between text-xs md:text-sm text-slate-600">
               <span>
                 Showing <strong>{filteredTenants.length}</strong> of{" "}
                 <strong>{typedTenants.length}</strong> tenants
               </span>
 
-              <div className="flex items-center gap-3">
-                <span className="inline-flex items-center gap-2 text-slate-500">
-                  <ArrowUpDown className="h-4 w-4" />
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 md:gap-3">
+                <span className="hidden sm:inline-flex items-center gap-2 text-slate-500 text-xs md:text-sm">
+                  <ArrowUpDown className="h-3 w-3 md:h-4 md:w-4" />
                   Organized for quick rent-roll scanning
                 </span>
 
@@ -725,13 +767,13 @@ export default function TenantsPage() {
                     variant={viewMode === "table" ? "default" : "ghost"}
                     className={
                       viewMode === "table"
-                        ? "bg-emerald-500 text-white hover:bg-emerald-600"
-                        : "text-slate-600 hover:text-emerald-700"
+                        ? "bg-emerald-500 text-white hover:bg-emerald-600 text-xs md:text-sm"
+                        : "text-slate-600 hover:text-emerald-700 text-xs md:text-sm"
                     }
                     onClick={() => setViewMode("table")}
                   >
-                    <Table2 className="h-4 w-4 mr-2" />
-                    Table
+                    <Table2 className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                    <span className="hidden sm:inline">Table</span>
                   </Button>
                   <Button
                     type="button"
@@ -739,13 +781,13 @@ export default function TenantsPage() {
                     variant={viewMode === "cards" ? "default" : "ghost"}
                     className={
                       viewMode === "cards"
-                        ? "bg-purple-500 text-white hover:bg-purple-600"
-                        : "text-slate-600 hover:text-purple-700"
+                        ? "bg-purple-500 text-white hover:bg-purple-600 text-xs md:text-sm"
+                        : "text-slate-600 hover:text-purple-700 text-xs md:text-sm"
                     }
                     onClick={() => setViewMode("cards")}
                   >
-                    <LayoutGrid className="h-4 w-4 mr-2" />
-                    Cards
+                    <LayoutGrid className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                    <span className="hidden sm:inline">Cards</span>
                   </Button>
                 </div>
               </div>
@@ -753,12 +795,12 @@ export default function TenantsPage() {
           </div>
 
           {filteredTenants.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
-              <Search className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-              <h2 className="text-xl font-bold text-slate-900 mb-2">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-12 text-center">
+              <Search className="h-8 w-8 md:h-10 md:w-10 text-slate-300 mx-auto mb-3" />
+              <h2 className="text-lg md:text-xl font-bold text-slate-900 mb-2">
                 No matching tenants
               </h2>
-              <p className="text-slate-600">
+              <p className="text-sm md:text-base text-slate-600">
                 Try changing the property filter, search term, or sort option.
               </p>
             </div>
@@ -768,22 +810,25 @@ export default function TenantsPage() {
                 <table className="w-full min-w-[880px]">
                   <thead className="bg-gradient-to-r from-emerald-50 to-purple-50 border-b border-emerald-100">
                     <tr>
-                      <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-6 py-4">
+                      <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-3 md:px-6 py-3 md:py-4">
                         Tenant
                       </th>
-                      <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-6 py-4">
+                      <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-3 md:px-6 py-3 md:py-4">
                         Property
                       </th>
-                      <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-6 py-4">
+                      <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-3 md:px-6 py-3 md:py-4">
                         Unit
                       </th>
-                      <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-6 py-4">
+                      <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-3 md:px-6 py-3 md:py-4">
                         Contact
                       </th>
-                      <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-6 py-4">
-                        Status
+                      <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-3 md:px-6 py-3 md:py-4">
+                        Lease Status
                       </th>
-                      <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-6 py-4">
+                      <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-3 md:px-6 py-3 md:py-4">
+                        Payment Status
+                      </th>
+                      <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-3 md:px-6 py-3 md:py-4">
                         Actions
                       </th>
                     </tr>
@@ -794,13 +839,14 @@ export default function TenantsPage() {
                       const propertyName =
                         activeLease?.unit.property.name ?? "—";
                       const unitNumber = activeLease?.unit.unitNumber ?? "—";
+                      const nextPayment = getNextUnpaidPayment(tenant.id);
 
                       return (
                         <tr
                           key={tenant.id}
                           className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70"
                         >
-                          <td className="px-6 py-4">
+                          <td className="px-3 md:px-6 py-3 md:py-4">
                             <div>
                               <div className="font-semibold text-slate-900">
                                 {tenant.user.fullName}
@@ -810,55 +856,95 @@ export default function TenantsPage() {
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 text-sm text-slate-700">
+                          <td className="px-3 md:px-6 py-3 md:py-4 text-sm text-slate-700">
                             {propertyName}
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-3 md:px-6 py-3 md:py-4">
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full border border-blue-100">
                               <Home className="h-3.5 w-3.5" />
                               Unit {unitNumber}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-sm text-slate-600">
+                          <td className="px-3 md:px-6 py-3 md:py-4 text-sm text-slate-600">
                             <div>{tenant.user.phone || "No phone"}</div>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-3 md:px-6 py-3 md:py-4">
                             <span
                               className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${activeLease ? "bg-emerald-100 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-600 border border-slate-200"}`}
                             >
                               {activeLease ? "Active Lease" : "Unassigned"}
                             </span>
                           </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
+                          <td className="px-3 md:px-6 py-3 md:py-4">
+                            {nextPayment ? (
+                              <div className="flex flex-col gap-1">
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(
+                                    nextPayment.status,
+                                  )}`}
+                                >
+                                  {getStatusIcon(nextPayment.status)}
+                                  {nextPayment.status}
+                                </span>
+                                <span className="text-xs text-slate-500">
+                                  UGX{" "}
+                                  {Number(nextPayment.amount).toLocaleString()}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-slate-500">
+                                No pending
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-3 md:px-6 py-3 md:py-4">
+                            <div className="flex flex-col md:flex-row items-start md:items-center gap-1 md:gap-2">
+                              {activeLease &&
+                                (nextPayment &&
+                                nextPayment.status !== "PAID" ? (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    className="bg-emerald-500 hover:bg-emerald-600 text-white text-xs w-full md:w-auto"
+                                    onClick={() =>
+                                      handleMarkAsPaid(nextPayment)
+                                    }
+                                  >
+                                    <CheckCircle className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                                    Mark Paid
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    className="bg-blue-500 hover:bg-blue-600 text-white text-xs w-full md:w-auto"
+                                    onClick={() =>
+                                      handleRecordNewPayment(tenant)
+                                    }
+                                  >
+                                    <Plus className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                                    Record Payment
+                                  </Button>
+                                ))}
                               <Button
                                 type="button"
                                 size="sm"
                                 variant="outline"
-                                className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                                onClick={() => handleViewPayments(tenant)}
-                              >
-                                <CreditCard className="h-4 w-4 mr-1" />
-                                Payments
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
+                                className="text-xs w-full md:w-auto"
                                 onClick={() => openEditDialog(tenant)}
                               >
-                                <Pencil className="h-4 w-4 mr-1" />
-                                Edit
+                                <Pencil className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                                <span className="md:inline">Edit</span>
                               </Button>
                               <Button
                                 type="button"
                                 size="sm"
                                 variant="outline"
-                                className="text-red-700 border-red-200 hover:bg-red-50 bg-white"
+                                className="text-red-700 border-red-200 hover:bg-red-50 bg-white text-xs w-full md:w-auto"
                                 onClick={() => setTenantToDelete(tenant)}
                               >
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                Delete
+                                <Trash2 className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                                <span className="md:inline">Delete</span>
                               </Button>
                             </div>
                           </td>
@@ -870,12 +956,13 @@ export default function TenantsPage() {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {filteredTenants.map((tenant) => {
                 const activeLease = tenant.leases?.[0];
                 const unitNumber = activeLease?.unit.unitNumber;
                 const propertyName = activeLease?.unit.property.name;
                 const propertyAddress = activeLease?.unit.property.address;
+                const nextPayment = getNextUnpaidPayment(tenant.id);
 
                 return (
                   <div
@@ -931,16 +1018,49 @@ export default function TenantsPage() {
                       )}
                     </div>
 
+                    {/* Payment Status */}
+                    {nextPayment && (
+                      <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-medium text-slate-600">
+                            Next Payment
+                          </span>
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(
+                              nextPayment.status,
+                            )}`}
+                          >
+                            {getStatusIcon(nextPayment.status)}
+                            {nextPayment.status}
+                          </span>
+                        </div>
+                        <div className="text-sm font-semibold text-slate-900">
+                          UGX {Number(nextPayment.amount).toLocaleString()}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="mt-4 flex flex-col gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700"
-                        onClick={() => handleViewPayments(tenant)}
-                      >
-                        <CreditCard className="h-4 w-4 mr-2" />
-                        View Payments
-                      </Button>
+                      {activeLease &&
+                        (nextPayment && nextPayment.status !== "PAID" ? (
+                          <Button
+                            type="button"
+                            className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
+                            onClick={() => handleMarkAsPaid(nextPayment)}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Mark Payment as Paid
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                            onClick={() => handleRecordNewPayment(tenant)}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Record Payment
+                          </Button>
+                        ))}
                       <div className="flex gap-2">
                         <Button
                           type="button"
@@ -970,236 +1090,113 @@ export default function TenantsPage() {
         </>
       )}
 
-      {/* Payment Management Dialog */}
-      <Dialog open={isPaymentsOpen} onOpenChange={setIsPaymentsOpen}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      {/* Mark as Paid / Record Payment Dialog */}
+      <Dialog open={isMarkPaidOpen} onOpenChange={setIsMarkPaidOpen}>
+        <DialogContent className="max-w-full sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              Payment History - {selectedTenantForPayments?.user.fullName}
+              {isCreatingNew ? "Record New Payment" : "Mark Payment as Paid"}
             </DialogTitle>
             <DialogDescription>
-              View and manage payments for this tenant
+              {isCreatingNew
+                ? "Create and record a new payment for this tenant"
+                : "Mark this payment as manually received"}
             </DialogDescription>
           </DialogHeader>
-
-          {loading ? (
-            <div className="py-12 text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-emerald-500 mx-auto mb-3" />
-              <p className="text-slate-600">Loading payments...</p>
-            </div>
-          ) : getTenantPayments().length === 0 ? (
-            <div className="py-12 text-center">
-              <CreditCard className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-600 font-medium mb-2">
-                No payments found for this tenant
-              </p>
-              <p className="text-sm text-slate-500">
-                This tenant may not have an active lease with scheduled payments
-                yet.
-              </p>
-              <div className="mt-4 text-xs text-slate-400">
-                Total payments in system: {payments.length}
+          {(selectedPayment || isCreatingNew) && (
+            <form onSubmit={handleRecordPayment} className="space-y-4 pb-2">
+              <div className="space-y-2">
+                <Label>Amount</Label>
+                {isCreatingNew ? (
+                  <Input
+                    type="number"
+                    placeholder="Enter amount in UGX"
+                    value={recordData.amount}
+                    onChange={(e) =>
+                      setRecordData({ ...recordData, amount: e.target.value })
+                    }
+                    required
+                  />
+                ) : (
+                  <Input
+                    value={`UGX ${Number(selectedPayment.amount).toLocaleString()}`}
+                    disabled
+                    className="bg-slate-50"
+                  />
+                )}
               </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
-                        Due Date
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
-                        Amount
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
-                        Status
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
-                        Property/Unit
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {getTenantPayments().map(
-                      (
-                        payment: any, // eslint-disable-line @typescript-eslint/no-explicit-any
-                      ) => (
-                        <tr key={payment.id} className="hover:bg-slate-50">
-                          <td className="px-4 py-3 text-sm text-slate-900">
-                            {new Date(payment.dueDate).toLocaleDateString()}
-                          </td>
-                          <td className="px-4 py-3 text-sm font-semibold text-slate-900">
-                            UGX {Number(payment.amount).toLocaleString()}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span
-                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(
-                                payment.status,
-                              )}`}
-                            >
-                              {getStatusIcon(payment.status)}
-                              {payment.status}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-slate-600">
-                            <div>{payment.lease.unit.property.name}</div>
-                            <div className="text-xs text-slate-500">
-                              Unit {payment.lease.unit.unitNumber}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            {payment.status === "PAID" ? (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleViewReceipt(payment)}
-                              >
-                                <FileText className="h-4 w-4 mr-1" />
-                                Receipt
-                              </Button>
-                            ) : (
-                              <Dialog
-                                open={
-                                  isRecordOpen &&
-                                  selectedPayment?.id === payment.id
-                                }
-                                onOpenChange={(open) => {
-                                  setIsRecordOpen(open);
-                                  if (open) setSelectedPayment(payment);
-                                  else setSelectedPayment(null);
-                                }}
-                              >
-                                <DialogTrigger asChild>
-                                  <Button
-                                    size="sm"
-                                    className="bg-emerald-500 hover:bg-emerald-600"
-                                  >
-                                    Manual Clearance
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-                                  <DialogHeader>
-                                    <DialogTitle>
-                                      Record Manual Payment
-                                    </DialogTitle>
-                                    <DialogDescription>
-                                      Mark this payment as manually received
-                                    </DialogDescription>
-                                  </DialogHeader>
-                                  <form
-                                    onSubmit={handleRecordPayment}
-                                    className="space-y-4 pb-2"
-                                  >
-                                    <div className="space-y-2">
-                                      <Label>Amount</Label>
-                                      <Input
-                                        value={`UGX ${Number(payment.amount).toLocaleString()}`}
-                                        disabled
-                                        className="bg-slate-50"
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label htmlFor="method">
-                                        Payment Method
-                                      </Label>
-                                      <Select
-                                        value={recordData.method}
-                                        onValueChange={(value) =>
-                                          setRecordData({
-                                            ...recordData,
-                                            method: value || "CASH",
-                                          })
-                                        }
-                                      >
-                                        <SelectTrigger id="method">
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="CASH">
-                                            Cash
-                                          </SelectItem>
-                                          <SelectItem value="BANK_TRANSFER">
-                                            Bank Transfer
-                                          </SelectItem>
-                                          <SelectItem value="MTN_MOBILE_MONEY">
-                                            MTN Mobile Money
-                                          </SelectItem>
-                                          <SelectItem value="AIRTEL_MONEY">
-                                            Airtel Money
-                                          </SelectItem>
-                                          <SelectItem value="CHECK">
-                                            Check
-                                          </SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label htmlFor="reference">
-                                        Reference Number (Optional)
-                                      </Label>
-                                      <Input
-                                        id="reference"
-                                        value={recordData.reference}
-                                        onChange={(e) =>
-                                          setRecordData({
-                                            ...recordData,
-                                            reference: e.target.value,
-                                          })
-                                        }
-                                        placeholder="Transaction reference"
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label htmlFor="notes">
-                                        Notes (Optional)
-                                      </Label>
-                                      <Input
-                                        id="notes"
-                                        value={recordData.notes}
-                                        onChange={(e) =>
-                                          setRecordData({
-                                            ...recordData,
-                                            notes: e.target.value,
-                                          })
-                                        }
-                                        placeholder="Additional notes"
-                                      />
-                                    </div>
-                                    <div className="flex justify-end gap-3 pt-6 border-t border-slate-200 mt-6 sticky bottom-0 bg-white pb-2">
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={() => {
-                                          setIsRecordOpen(false);
-                                          setSelectedPayment(null);
-                                        }}
-                                      >
-                                        Cancel
-                                      </Button>
-                                      <Button
-                                        type="submit"
-                                        className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6"
-                                      >
-                                        ✓ Mark as Paid
-                                      </Button>
-                                    </div>
-                                  </form>
-                                </DialogContent>
-                              </Dialog>
-                            )}
-                          </td>
-                        </tr>
-                      ),
-                    )}
-                  </tbody>
-                </table>
+              <div className="space-y-2">
+                <Label htmlFor="method">Payment Method</Label>
+                <Select
+                  value={recordData.method}
+                  onValueChange={(value) =>
+                    setRecordData({
+                      ...recordData,
+                      method: value || "CASH",
+                    })
+                  }
+                >
+                  <SelectTrigger id="method">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CASH">Cash</SelectItem>
+                    <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
+                    <SelectItem value="MTN_MOBILE_MONEY">
+                      MTN Mobile Money
+                    </SelectItem>
+                    <SelectItem value="AIRTEL_MONEY">Airtel Money</SelectItem>
+                    <SelectItem value="CHECK">Check</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="reference">Reference Number (Optional)</Label>
+                <Input
+                  id="reference"
+                  value={recordData.reference}
+                  onChange={(e) =>
+                    setRecordData({
+                      ...recordData,
+                      reference: e.target.value,
+                    })
+                  }
+                  placeholder="Transaction reference"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes (Optional)</Label>
+                <Input
+                  id="notes"
+                  value={recordData.notes}
+                  onChange={(e) =>
+                    setRecordData({
+                      ...recordData,
+                      notes: e.target.value,
+                    })
+                  }
+                  placeholder="Additional notes"
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-6 border-t border-slate-200 mt-6 sticky bottom-0 bg-white pb-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsMarkPaidOpen(false);
+                    setSelectedPayment(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6"
+                >
+                  {isCreatingNew ? "✓ Record Payment" : "✓ Mark as Paid"}
+                </Button>
+              </div>
+            </form>
           )}
         </DialogContent>
       </Dialog>

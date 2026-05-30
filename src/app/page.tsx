@@ -18,6 +18,9 @@ export default function LandingPage() {
             <span className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">SmartRentUG</span>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
+            <Link href="/houses-for-rent" className="text-xs sm:text-sm font-medium text-slate-600 hover:text-emerald-600 transition-colors">
+              Houses for Rent
+            </Link>
             <Link href="/login" className="text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
               Sign In
             </Link>
@@ -139,6 +142,47 @@ export default function LandingPage() {
                   <p className="text-slate-600">Receive payments via cash or Mobile Money.</p>
                 </CardContent>
               </Card>
+            </div>
+          </div>
+        </section>
+
+        {/* Tenant Marketing Section */}
+        <section className="py-24 bg-white sm:py-32 border-t border-slate-200">
+          <div className="container mx-auto px-4 md:px-8">
+            <div className="mx-auto max-w-7xl flex flex-col-reverse lg:flex-row items-center gap-12 lg:gap-24">
+              <div className="w-full lg:w-1/2">
+                <div className="relative rounded-2xl bg-slate-50 p-2 ring-1 ring-slate-100 shadow-xl overflow-hidden aspect-[4/3]">
+                  <div className="absolute inset-0 bg-emerald-500/10 mix-blend-multiply rounded-xl z-10" />
+                  <div className="absolute inset-0 bg-gradient-to-tr from-slate-900/40 to-transparent z-20" />
+                  <div className="absolute bottom-6 left-6 z-30">
+                    <div className="bg-white/90 backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg inline-flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                      <span className="font-semibold text-slate-900">Verified Landlords</span>
+                    </div>
+                  </div>
+                  {/* We use a placeholder pattern here to represent the housing image */}
+                  <div className="w-full h-full bg-[url('https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80')] bg-cover bg-center rounded-xl" />
+                </div>
+              </div>
+              <div className="w-full lg:w-1/2">
+                <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl mb-6">
+                  Looking for a place to stay?
+                </h2>
+                <p className="text-lg text-slate-600 mb-8 leading-relaxed">
+                  Skip the middleman and find your next perfect home directly from verified landlords. Browse available units, view high-quality photos, and contact property managers instantly.
+                </p>
+                <ul className="space-y-4 mb-10">
+                  {['No hidden agency fees', 'Direct contact with property owners', 'Accurate, up-to-date availability', 'Detailed property highlights and photos'].map((item, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <CheckCircle2 className="h-6 w-6 text-emerald-500 flex-shrink-0" />
+                      <span className="text-slate-700">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Button asChild size="lg" className="bg-slate-900 hover:bg-slate-800 text-white rounded-full h-12 px-8 text-base shadow-lg">
+                  <Link href="/houses-for-rent">Browse Available Houses <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                </Button>
+              </div>
             </div>
           </div>
         </section>

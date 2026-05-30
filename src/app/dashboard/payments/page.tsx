@@ -122,26 +122,28 @@ export default function PaymentsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6 p-4 md:p-0">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Payments</h1>
-          <p className="text-slate-600 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
+            Payments
+          </h1>
+          <p className="text-sm md:text-base text-slate-600 mt-1">
             Track rent payments and receipts
           </p>
         </div>
       </div>
 
       {payments.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-12">
           <div className="text-center max-w-md mx-auto">
             <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <CreditCard className="h-8 w-8 text-emerald-600" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">
+            <h2 className="text-xl md:text-2xl font-bold text-slate-900 mb-2">
               No payments recorded
             </h2>
-            <p className="text-slate-600 mb-6">
+            <p className="text-sm md:text-base text-slate-600 mb-6">
               Payments will appear here once tenants are assigned to units with
               active leases
             </p>
@@ -150,28 +152,28 @@ export default function PaymentsPage() {
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[880px]">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Tenant
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Property/Unit
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Amount
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Due Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Source
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -190,31 +192,31 @@ export default function PaymentsPage() {
 
                   return (
                     <tr key={payment.id} className="hover:bg-slate-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-slate-900">
+                      <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap">
+                        <div className="text-xs md:text-sm font-medium text-slate-900">
                           {payment.tenant.user.fullName}
                         </div>
-                        <div className="text-sm text-slate-500">
+                        <div className="text-xs text-slate-500">
                           {payment.tenant.user.email}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-slate-900">
+                      <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap">
+                        <div className="text-xs md:text-sm text-slate-900">
                           {payment.lease.unit.property.name}
                         </div>
-                        <div className="text-sm text-slate-500">
+                        <div className="text-xs text-slate-500">
                           Unit {payment.lease.unit.unitNumber}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-semibold text-slate-900">
+                      <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap">
+                        <div className="text-xs md:text-sm font-semibold text-slate-900">
                           UGX {Number(payment.amount).toLocaleString()}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                      <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-slate-500">
                         {new Date(payment.dueDate).toLocaleDateString()}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap">
                         <span
                           className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(payment.status)}`}
                         >
@@ -222,14 +224,14 @@ export default function PaymentsPage() {
                           {payment.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap">
                         <span
                           className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${paymentSource === "Tenant Portal" ? "bg-blue-100 text-blue-700" : paymentSource === "Manual Clearance" ? "bg-purple-100 text-purple-700" : "bg-slate-100 text-slate-600"}`}
                         >
                           {paymentSource}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm">
                         {payment.status !== "PAID" ? (
                           <Dialog
                             open={
@@ -244,12 +246,15 @@ export default function PaymentsPage() {
                             <DialogTrigger asChild>
                               <Button
                                 size="sm"
-                                className="bg-emerald-500 hover:bg-emerald-600"
+                                className="bg-emerald-500 hover:bg-emerald-600 text-xs"
                               >
-                                Manual Clearance
+                                <span className="hidden md:inline">
+                                  Manual Clearance
+                                </span>
+                                <span className="md:hidden">Clear</span>
                               </Button>
                             </DialogTrigger>
-                            <DialogContent>
+                            <DialogContent className="max-w-full sm:max-w-md">
                               <DialogHeader>
                                 <DialogTitle>
                                   Manual Payment Clearance
@@ -359,7 +364,7 @@ export default function PaymentsPage() {
                             </DialogContent>
                           </Dialog>
                         ) : (
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-col md:flex-row items-start md:items-center gap-2">
                             <span className="text-slate-500 text-xs">
                               Paid on{" "}
                               {new Date(payment.paidDate).toLocaleDateString()}
@@ -368,9 +373,9 @@ export default function PaymentsPage() {
                               size="sm"
                               variant="outline"
                               onClick={() => handleViewReceipt(payment)}
-                              className="ml-2"
+                              className="md:ml-2 text-xs"
                             >
-                              <FileText className="h-4 w-4 mr-1" />
+                              <FileText className="h-3 w-3 md:h-4 md:w-4 mr-1" />
                               Receipt
                             </Button>
                           </div>

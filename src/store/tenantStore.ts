@@ -31,6 +31,7 @@ interface TenantStore {
   createTenant: (data: CreateTenantDto) => Promise<Tenant>;
   updateTenant: (id: string, data: UpdateTenantDto) => Promise<Tenant>;
   deleteTenant: (id: string) => Promise<void>;
+  reset: () => void; // Add reset method for security
 }
 
 export const useTenantStore = create<TenantStore>((set) => ({
@@ -97,7 +98,16 @@ export const useTenantStore = create<TenantStore>((set) => ({
         error: getErrorMessage(error, "Failed to delete tenant"),
         loading: false,
       });
-      throw error;
     }
+  },
+
+  // SECURITY: Reset method to clear all data on logout
+  reset: () => {
+    console.log("[TenantStore] Resetting all tenant data");
+    set({
+      tenants: [],
+      loading: false,
+      error: null,
+    });
   },
 }));

@@ -31,6 +31,11 @@ export const paymentService = {
     return response.data;
   },
 
+  async getPaymentsByTenant(tenantId: string) {
+    const response = await api.get(`/payments/tenant/${tenantId}`);
+    return response.data;
+  },
+
   async getOverduePayments() {
     const response = await api.get("/payments/overdue");
     return response.data;

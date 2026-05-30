@@ -462,44 +462,51 @@ export default function PropertiesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6 p-4 md:p-0">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Properties</h1>
-          <p className="text-slate-600 mt-1">Manage your rental properties</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
+            Properties
+          </h1>
+          <p className="text-sm md:text-base text-slate-600 mt-1">
+            Manage your rental properties
+          </p>
         </div>
         <Button
           onClick={() => setShowAddModal(true)}
-          className="bg-emerald-500 hover:bg-emerald-600"
+          className="bg-emerald-500 hover:bg-emerald-600 text-sm md:text-base"
+          size="sm"
         >
-          <Plus className="h-5 w-5 mr-2" /> Add Property
+          <Plus className="h-4 w-4 md:h-5 md:w-5 mr-2" /> Add Property
         </Button>
       </div>
 
       {/* Properties Grid */}
       {properties.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-12">
           <div className="text-center max-w-md mx-auto">
             <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Building2 className="h-8 w-8 text-emerald-600" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">
+            <h2 className="text-xl md:text-2xl font-bold text-slate-900 mb-2">
               No properties yet
             </h2>
-            <p className="text-slate-600 mb-6">
+            <p className="text-sm md:text-base text-slate-600 mb-6">
               Start by adding your first property to manage rental units
             </p>
             <Button
               onClick={() => setShowAddModal(true)}
-              className="bg-emerald-500 hover:bg-emerald-600"
+              className="bg-emerald-500 hover:bg-emerald-600 text-sm md:text-base"
+              size="sm"
             >
-              <Plus className="h-5 w-5 mr-2" /> Add Your First Property
+              <Plus className="h-4 w-4 md:h-5 md:w-5 mr-2" /> Add Your First
+              Property
             </Button>
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {properties.map((property) => {
             const vacant =
               property.units?.filter((u: any) => u.status === "VACANT")
@@ -512,7 +519,7 @@ export default function PropertiesPage() {
                 key={property.id}
                 className="bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow"
               >
-                <div className="p-6">
+                <div className="p-4 md:p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
                       <Building2 className="h-6 w-6 text-emerald-600" />
@@ -580,10 +587,10 @@ export default function PropertiesPage() {
                   </div>
                 )}
 
-                <div className="flex items-center gap-2 px-6 py-4 border-t border-slate-100">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 px-4 md:px-6 py-3 md:py-4 border-t border-slate-100">
                   <Button
                     variant="outline"
-                    className="flex-1 text-sm"
+                    className="flex-1 text-xs md:text-sm"
                     onClick={() =>
                       router.push(`/dashboard/properties/${property.id}`)
                     }
@@ -592,7 +599,7 @@ export default function PropertiesPage() {
                   </Button>
                   <Button
                     variant="outline"
-                    className="flex-1 text-sm"
+                    className="flex-1 text-xs md:text-sm"
                     onClick={() => {
                       setSelectedProperty(property);
                       setShowUnitsModal(true);
@@ -621,8 +628,8 @@ export default function PropertiesPage() {
       {/* Add Property Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <h2 className="text-2xl font-bold text-slate-900 mb-6">
+          <div className="bg-white rounded-xl max-w-full sm:max-w-md w-full p-4 md:p-6 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl md:text-2xl font-bold text-slate-900 mb-4 md:mb-6">
               Add New Property
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -690,10 +697,10 @@ export default function PropertiesPage() {
       {/* Manage Units Modal */}
       {showUnitsModal && selectedProperty && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-white rounded-xl max-w-full sm:max-w-3xl w-full p-4 md:p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 md:mb-6">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900">
+                <h2 className="text-xl md:text-2xl font-bold text-slate-900">
                   Manage Units
                 </h2>
                 <p className="text-slate-600">{selectedProperty.name}</p>
@@ -708,12 +715,12 @@ export default function PropertiesPage() {
             </div>
 
             {/* Existing Units */}
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-3">
+            <div className="mb-4 md:mb-6">
+              <h3 className="text-base md:text-lg font-semibold text-slate-900 mb-3">
                 Existing Units ({selectedProperty.units?.length ?? 0})
               </h3>
               {selectedProperty.units?.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3">
                   {selectedProperty.units.map((unit: any) => (
                     <div
                       key={unit.id}
@@ -760,12 +767,12 @@ export default function PropertiesPage() {
             </div>
 
             {/* Add New Unit Form */}
-            <div className="border-t border-slate-200 pt-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">
+            <div className="border-t border-slate-200 pt-4 md:pt-6">
+              <h3 className="text-base md:text-lg font-semibold text-slate-900 mb-3 md:mb-4">
                 Add New Unit
               </h3>
               <form onSubmit={handleAddUnit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="unitNumber">Unit Number *</Label>
                     <Input

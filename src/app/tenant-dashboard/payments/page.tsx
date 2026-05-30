@@ -81,26 +81,28 @@ export default function TenantPaymentsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-5 lg:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">My Payments</h1>
-          <p className="text-slate-600 mt-1">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900">
+            My Payments
+          </h1>
+          <p className="text-sm sm:text-base text-slate-600 mt-1">
             Manage your rent payments and view history
           </p>
         </div>
       </div>
 
       {payments.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8 lg:p-12">
           <div className="text-center max-w-md mx-auto">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CreditCard className="h-8 w-8 text-blue-600" />
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+              <CreditCard className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">
+            <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 mb-2">
               No payments found
             </h2>
-            <p className="text-slate-600">
+            <p className="text-sm sm:text-base text-slate-600">
               You do not have any pending or past payments.
             </p>
           </div>
@@ -108,19 +110,19 @@ export default function TenantPaymentsPage() {
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[640px]">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Due Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Amount
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Action
                   </th>
                 </tr>
@@ -128,19 +130,19 @@ export default function TenantPaymentsPage() {
               <tbody className="bg-white divide-y divide-slate-200">
                 {payments.map((payment: any) => (
                   <tr key={payment.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-medium">
+                    <td className="px-3 sm:px-4 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs sm:text-sm text-slate-900 font-medium">
                       {new Date(payment.dueDate).toLocaleDateString(undefined, {
                         year: "numeric",
                         month: "short",
                         day: "numeric",
                       })}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-semibold text-slate-900">
+                    <td className="px-3 sm:px-4 md:px-6 py-3 md:py-4 whitespace-nowrap">
+                      <div className="text-xs sm:text-sm font-semibold text-slate-900">
                         UGX {Number(payment.amount).toLocaleString()}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 sm:px-4 md:px-6 py-3 md:py-4 whitespace-nowrap">
                       <span
                         className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(payment.status)}`}
                       >
@@ -148,14 +150,15 @@ export default function TenantPaymentsPage() {
                         {payment.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="px-3 sm:px-4 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs sm:text-sm">
                       {payment.status !== "PAID" ? (
                         <Button
                           onClick={() =>
                             handlePayNow(payment.id, payment.amount)
                           }
                           disabled={isPaying === payment.id}
-                          className="bg-emerald-500 hover:bg-emerald-600 gap-2"
+                          size="sm"
+                          className="bg-emerald-500 hover:bg-emerald-600 gap-1 sm:gap-2 text-xs sm:text-sm"
                         >
                           {isPaying === payment.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />

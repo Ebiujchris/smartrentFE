@@ -103,20 +103,27 @@ export default function TenantMaintenancePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-5 lg:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Maintenance</h1>
-          <p className="text-slate-600 mt-1">Report issues and track repairs</p>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900">
+            Maintenance
+          </h1>
+          <p className="text-sm sm:text-base text-slate-600 mt-1">
+            Report issues and track repairs
+          </p>
         </div>
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-emerald-500 hover:bg-emerald-600">
-              <Plus className="h-5 w-5 mr-2" />
+            <Button
+              size="sm"
+              className="bg-emerald-500 hover:bg-emerald-600 w-full sm:w-auto"
+            >
+              <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               Report Issue
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Report Maintenance Issue</DialogTitle>
               <DialogDescription>
