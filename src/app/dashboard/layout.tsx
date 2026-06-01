@@ -50,9 +50,9 @@ export default function DashboardLayout({
   // Show loading state during hydration
   if (!mounted) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto"></div>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50" suppressHydrationWarning>
+        <div className="text-center" suppressHydrationWarning>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto" suppressHydrationWarning></div>
           <p className="mt-4 text-slate-600">Loading...</p>
         </div>
       </div>
@@ -74,12 +74,12 @@ export default function DashboardLayout({
     <>
       <ToastProvider />
       <SidebarProvider>
-        <div className="flex min-h-screen bg-slate-50">
+        <div className="flex min-h-screen bg-slate-50" suppressHydrationWarning>
           <Sidebar />
 
-          <div className="flex flex-col flex-1 min-w-0">
+          <div className="flex flex-col flex-1 min-w-0" suppressHydrationWarning>
             <Navbar />
-            <main className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-5 lg:space-y-6 flex-1">
+            <main className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-5 lg:space-y-6 flex-1" suppressHydrationWarning>
               {children}
             </main>
           </div>

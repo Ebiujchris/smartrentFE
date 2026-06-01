@@ -74,53 +74,53 @@ export default function MaintenancePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6 p-4 md:p-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Maintenance</h1>
-          <p className="text-slate-600 mt-1">Track maintenance requests</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Maintenance</h1>
+          <p className="text-sm md:text-base text-slate-600 mt-1">Track maintenance requests</p>
         </div>
       </div>
 
       {requests.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-12">
           <div className="text-center max-w-md mx-auto">
-            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Wrench className="h-8 w-8 text-orange-600" />
+            <div className="w-12 h-12 md:w-16 md:h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Wrench className="h-6 w-6 md:h-8 md:w-8 text-orange-600" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">
+            <h2 className="text-xl md:text-2xl font-bold text-slate-900 mb-2">
               No maintenance requests
             </h2>
-            <p className="text-slate-600 mb-6">
+            <p className="text-sm md:text-base text-slate-600 mb-6">
               All maintenance requests will appear here
             </p>
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6">
+        <div className="grid grid-cols-1 gap-4 md:gap-6">
           {requests.map((request: any) => (
-            <div key={request.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-bold text-slate-900">{request.title}</h3>
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityBadge(request.priority)}`}>
+            <div key={request.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6">
+              <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mb-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <h3 className="text-base md:text-lg font-bold text-slate-900 break-words">{request.title}</h3>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getPriorityBadge(request.priority)}`}>
                       {request.priority}
                     </span>
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(request.status)}`}>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(request.status)}`}>
                       {getStatusIcon(request.status)}
-                      {request.status.replace('_', ' ')}
+                      <span className="hidden sm:inline">{request.status.replace('_', ' ')}</span>
                     </span>
                   </div>
-                  <p className="text-slate-600 mb-3">{request.description}</p>
-                  <div className="flex items-center gap-6 text-sm text-slate-500">
-                    <div>
+                  <p className="text-sm md:text-base text-slate-600 mb-3 break-words">{request.description}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs md:text-sm text-slate-500">
+                    <div className="truncate">
                       <span className="font-medium">Property:</span> {request.unit.property.name}
                     </div>
                     <div>
                       <span className="font-medium">Unit:</span> {request.unit.unitNumber}
                     </div>
-                    <div>
+                    <div className="truncate">
                       <span className="font-medium">Tenant:</span> {request.tenant.user.fullName}
                     </div>
                     <div>
@@ -128,13 +128,13 @@ export default function MaintenancePage() {
                     </div>
                   </div>
                 </div>
-                <div className="ml-4">
+                <div className="w-full lg:w-auto lg:ml-4">
                   <Select
                     value={request.status}
                     onValueChange={(value) => handleStatusChange(request.id, value as string)}
                     disabled={updatingId === request.id}
                   >
-                    <SelectTrigger className="w-40">
+                    <SelectTrigger className="w-full lg:w-40">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -148,7 +148,7 @@ export default function MaintenancePage() {
               </div>
               {request.notes && (
                 <div className="mt-4 p-3 bg-slate-50 rounded-lg">
-                  <p className="text-sm text-slate-600">
+                  <p className="text-xs md:text-sm text-slate-600 break-words">
                     <span className="font-medium">Notes:</span> {request.notes}
                   </p>
                 </div>

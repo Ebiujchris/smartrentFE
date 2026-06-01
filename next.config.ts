@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  reactStrictMode: true,
   experimental: {
     optimizePackageImports: ['lucide-react', 'sonner', '@base-ui/react'],
   },
@@ -23,6 +24,11 @@ const nextConfig: NextConfig = {
     ],
   },
   poweredByHeader: false,
+  // Suppress hydration warnings caused by browser extensions
+  onDemandEntries: {
+    maxInactiveAge: 25 * 1000,
+    pagesBufferLength: 2,
+  },
   headers: async () => {
     return [
       {
