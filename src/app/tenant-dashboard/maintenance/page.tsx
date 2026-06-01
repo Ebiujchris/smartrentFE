@@ -55,10 +55,10 @@ export default function TenantMaintenancePage() {
           const tenant = await tenantService.getCurrentTenant();
           if (tenant?.leases && tenant.leases.length > 0) {
             const activeLeases = tenant.leases.filter(
-              (lease: any) => lease.status === "ACTIVE" || lease.status === "active"
+              (lease: any) => lease.isActive === true
             );
             const lease = activeLeases[0] || tenant.leases[0];
-            if (lease?.unitId) {
+            if (lease?.unit?.id) {
               setTenantUnit(lease);
             }
           }
@@ -77,7 +77,7 @@ export default function TenantMaintenancePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!tenantUnit?.unitId) {
+    if (!tenantUnit?.unit?.id) {
       toast.error("Unable to submit request", {
         description: "We couldn't find your current unit. Please contact support.",
       });
@@ -90,7 +90,7 @@ export default function TenantMaintenancePage() {
         title: formData.title,
         description: formData.description,
         priority: formData.priority,
-        unitId: tenantUnit.unitId,
+        unitId: tenantUnit.unit.id,
       });
 
       toast.success("Maintenance request submitted successfully", {
@@ -151,7 +151,7 @@ export default function TenantMaintenancePage() {
             <Button
               size="sm"
               className="bg-emerald-500 hover:bg-emerald-600 w-full sm:w-auto"
-              disabled={unitLoading || !tenantUnit?.unitId}
+              disabled={unitLoading || !tenantUnit?.unit?.id}
             >
               <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               {unitLoading ? "Loading..." : "Report Issue"}
@@ -236,7 +236,7 @@ export default function TenantMaintenancePage() {
         </Dialog>
       </div>
 
-      {!tenantUnit?.unitId && !unitLoading && (
+      {!tenantUnit?.unit?.id && !unitLoading && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
           <div className="flex gap-3">
             <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />

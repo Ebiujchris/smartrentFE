@@ -70,7 +70,7 @@ export default function Sidebar() {
   const pendingCount = useMaintenanceStore((state) => state.pendingCount);
 
   const isActive = (href: string) => pathname === href;
-  const showPendingBadge = ['LANDLORD', 'PROPERTY_MANAGER', 'ADMIN'].includes(user?.role);
+  const showPendingBadge = user?.role ? ['LANDLORD', 'PROPERTY_MANAGER', 'ADMIN'].includes(user.role) : false;
 
   const handleLogout = () => {
     logout();
