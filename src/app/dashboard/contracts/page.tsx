@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/authStore';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { ErrorHandler } from '@/lib/errorHandler';
+import { formatDate } from '@/lib/dateUtils';
 
 interface Contract {
   id: string;
@@ -237,7 +238,7 @@ export default function ContractsPage() {
                     <div>
                       <p className="text-xs text-slate-500">Start Date</p>
                       <p className="text-sm font-medium text-slate-900">
-                        {new Date(contract.startDate).toLocaleDateString()}
+                        {formatDate(contract.startDate)}
                       </p>
                     </div>
                     <div>

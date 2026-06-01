@@ -123,9 +123,9 @@ export default function MaintenancePage() {
                     <div className="truncate">
                       <span className="font-medium">Tenant:</span> {request.tenant.user.fullName}
                     </div>
-                    <div>
-                      <span className="font-medium">Reported:</span> {new Date(request.reportedAt).toLocaleDateString()}
-                    </div>
+                     <div>
+                       <span className="font-medium">Reported:</span> {request.reportedAt ? new Date(request.reportedAt).toLocaleDateString() : '-'}
+                     </div>
                   </div>
                 </div>
                 <div className="w-full lg:w-auto lg:ml-4">

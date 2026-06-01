@@ -13,6 +13,21 @@ interface Tenant {
     fullName: string;
     email: string;
   };
+  leases?: Array<{
+    id: string;
+    isActive: boolean;
+    unit: {
+      id: string;
+      unitNumber: string;
+      property: {
+        id: string;
+        name: string;
+        address: string;
+      };
+    };
+    rentAmount: number;
+    deposit: number;
+  }>;
 }
 
 export default function NewContractPage() {
@@ -120,14 +135,49 @@ Tenant: _________________________ Date: _____________`;
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
+    // Auto-populate property and unit when tenant is selected
+    if (name === 'tenantId' && value) {
+      const selectedTenant = tenants.find(t => t.id === value);
+      if (selectedTenant && selectedTenant.leases && selectedTenant.leases.length > 0) {
+        // Get the active lease
+        const activeLease = selectedTenant.leases.find(l => l.isActive) || selectedTenant.leases[0];
+        if (activeLease) {
+          setFormData((prev) => ({
+            ...prev,
+            tenantId: value,
+            propertyName: activeLease.unit.property.name,
+            unitNumber: activeLease.unit.unitNumber,
+            address: activeLease.unit.property.address,
+            rentAmount: activeLease.rentAmount.toString(),
+            deposit: activeLease.deposit.toString(),
+          }));
+          toast.success('Property and unit details auto-filled from active lease');
+          return; // Exit early since we've already updated formData
+        }
+      }
+    }
+
     // Auto-calculate duration when dates change
     if (name === 'startDate' || name === 'endDate') {
-      const start = name === 'startDate' ? new Date(value) : new Date(formData.startDate);
-      const end = name === 'endDate' ? new Date(value) : new Date(formData.endDate);
+      const startValue = name === 'startDate' ? value : formData.startDate;
+      const endValue = name === 'endDate' ? value : formData.endDate;
       
-      if (start && end && end > start) {
-        const months = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30));
-        setFormData((prev) => ({ ...prev, duration: months.toString() }));
+      // Only calculate if both dates are provided
+      if (startValue && endValue) {
+        const start = new Date(startValue);
+        const end = new Date(endValue);
+        
+        // Check if dates are valid (not Invalid Date)
+        if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end > start) {
+          const months = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30));
+          setFormData((prev) => ({ ...prev, duration: months.toString() }));
+        } else {
+          // Clear duration if dates are invalid or end is before start
+          setFormData((prev) => ({ ...prev, duration: '' }));
+        }
+      } else {
+        // Clear duration if either date is missing
+        setFormData((prev) => ({ ...prev, duration: '' }));
       }
     }
   };

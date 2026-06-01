@@ -262,20 +262,20 @@ function UnitDetailPanel({
                       <div>
                         <p className="text-slate-500 text-xs">Start Date</p>
                         <p className="font-medium text-slate-800">
-                          {new Date(activeLease.startDate).toLocaleDateString(
-                            undefined,
-                            { year: "numeric", month: "short", day: "numeric" },
-                          )}
-                        </p>
+                           {activeLease.startDate ? new Date(activeLease.startDate).toLocaleDateString(
+                             undefined,
+                             { year: "numeric", month: "short", day: "numeric" },
+                           ) : '-'}
+                         </p>
                       </div>
                       <div>
                         <p className="text-slate-500 text-xs">End Date</p>
-                        <p className="font-medium text-slate-800">
-                          {new Date(activeLease.endDate).toLocaleDateString(
-                            undefined,
-                            { year: "numeric", month: "short", day: "numeric" },
-                          )}
-                        </p>
+                         <p className="font-medium text-slate-800">
+                           {activeLease.endDate ? new Date(activeLease.endDate).toLocaleDateString(
+                             undefined,
+                             { year: "numeric", month: "short", day: "numeric" },
+                           ) : '-'}
+                         </p>
                       </div>
                       <div>
                         <p className="text-slate-500 text-xs">Rent Amount</p>
@@ -317,9 +317,9 @@ function UnitDetailPanel({
                               <p className="text-sm font-medium text-slate-800">
                                 UGX {Number(p.amount).toLocaleString()}
                               </p>
-                              <p className="text-xs text-slate-500">
-                                Due: {new Date(p.dueDate).toLocaleDateString()}
-                              </p>
+                               <p className="text-xs text-slate-500">
+                                 Due: {p.dueDate ? new Date(p.dueDate).toLocaleDateString() : '-'}
+                               </p>
                             </div>
                             <span
                               className={`text-xs px-2 py-1 rounded-full font-medium ${paymentStatusColor(p.status)}`}

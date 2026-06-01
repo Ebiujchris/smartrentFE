@@ -12,6 +12,9 @@ import {
   Printer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+import { formatPaymentDate } from "@/lib/dateUtils";
 
 interface PaymentReceiptProps {
   payment: any;
@@ -28,17 +31,55 @@ export default function PaymentReceipt({
     window.print();
   };
 
-  const handleDownload = () => {
-    // In a real app, you'd generate a PDF here
-    window.print();
+  const handleDownload = async () => {
+    if (!receiptRef.current) return;
+
+    try {
+      // Hide buttons before capturing
+      const buttons = receiptRef.current.querySelectorAll('button');
+      buttons.forEach(btn => (btn as HTMLElement).style.display = 'none');
+
+      // Capture the receipt as canvas with better compatibility
+      const canvas = await html2canvas(receiptRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        allowTaint: true,
+        foreignObjectRendering: false,
+      });
+
+      // Show buttons again
+      buttons.forEach(btn => (btn as HTMLElement).style.display = '');
+
+      // Convert canvas to PDF
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const imgWidth = 210; // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      
+      // Generate filename
+      const filename = `Receipt_${receiptNumber}_${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(filename);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      // Use toast instead of alert
+      if (typeof window !== 'undefined') {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        alert(`Failed to generate PDF: ${message}. Please try printing instead (Ctrl+P).`);
+      }
+    }
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+  const formatDate = (date: string | null | undefined) => {
+    return formatPaymentDate(date);
   };
 
   const receiptNumber = `RCP-${payment.id.slice(0, 8).toUpperCase()}`;

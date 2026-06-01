@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Bell, Menu, Search } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useTenantSidebar } from "./TenantSidebar";
+import NotificationDropdown from "@/components/notifications/NotificationDropdown";
 
 export default function TenantNavbar() {
   const { user } = useAuthStore();
@@ -32,10 +33,7 @@ export default function TenantNavbar() {
       {/* Right side */}
       <div className="flex items-center gap-2 sm:gap-3 lg:gap-4">
         {/* Notifications */}
-        <button className="relative p-2 hover:bg-slate-100 rounded-lg transition-colors">
-          <Bell className="h-5 w-5 text-slate-600" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-        </button>
+        <NotificationDropdown />
 
         {/* Profile */}
         <div className="flex items-center gap-2 sm:gap-3">

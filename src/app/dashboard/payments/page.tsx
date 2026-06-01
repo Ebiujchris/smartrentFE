@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import PaymentReceipt from "@/components/receipts/PaymentReceipt";
+import { formatPaymentDate, isValidDate } from "@/lib/dateUtils";
 
 export default function PaymentsPage() {
   const { payments, loading, fetchPayments, recordPayment } = usePaymentStore();
@@ -213,9 +214,9 @@ export default function PaymentsPage() {
                           UGX {Number(payment.amount).toLocaleString()}
                         </div>
                       </td>
-                      <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-slate-500">
-                        {new Date(payment.dueDate).toLocaleDateString()}
-                      </td>
+                       <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-slate-500">
+                         {payment.dueDate ? new Date(payment.dueDate).toLocaleDateString() : '-'}
+                       </td>
                       <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap">
                         <span
                           className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(payment.status)}`}
@@ -366,8 +367,8 @@ export default function PaymentsPage() {
                         ) : (
                           <div className="flex flex-col md:flex-row items-start md:items-center gap-2">
                             <span className="text-slate-500 text-xs">
-                              {payment.paidDate
-                                ? `Paid on ${new Date(payment.paidDate).toLocaleDateString()}`
+                              {isValidDate(payment.paidDate)
+                                ? `Paid on ${formatPaymentDate(payment.paidDate)}`
                                 : "Paid"}
                             </span>
                             <Button

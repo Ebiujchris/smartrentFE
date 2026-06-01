@@ -12,6 +12,7 @@ import {
 import { usePaymentStore } from "@/store/paymentStore";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { formatPaymentDate, isValidDate } from "@/lib/dateUtils";
 
 export default function TenantPaymentsPage() {
   const { payments, loading, fetchPayments, recordPayment } = usePaymentStore();
@@ -130,13 +131,13 @@ export default function TenantPaymentsPage() {
               <tbody className="bg-white divide-y divide-slate-200">
                 {payments.map((payment: any) => (
                   <tr key={payment.id} className="hover:bg-slate-50">
-                    <td className="px-3 sm:px-4 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs sm:text-sm text-slate-900 font-medium">
-                      {new Date(payment.dueDate).toLocaleDateString(undefined, {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </td>
+                     <td className="px-3 sm:px-4 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs sm:text-sm text-slate-900 font-medium">
+                       {payment.dueDate ? new Date(payment.dueDate).toLocaleDateString(undefined, {
+                         year: "numeric",
+                         month: "short",
+                         day: "numeric",
+                       }) : '-'}
+                     </td>
                     <td className="px-3 sm:px-4 md:px-6 py-3 md:py-4 whitespace-nowrap">
                       <div className="text-xs sm:text-sm font-semibold text-slate-900">
                         UGX {Number(payment.amount).toLocaleString()}
@@ -169,8 +170,8 @@ export default function TenantPaymentsPage() {
                         </Button>
                       ) : (
                         <span className="text-slate-500 text-xs">
-                          {payment.paidDate
-                            ? `Paid on ${new Date(payment.paidDate).toLocaleDateString()}`
+                          {isValidDate(payment.paidDate)
+                            ? `Paid on ${formatPaymentDate(payment.paidDate)}`
                             : "Paid"}
                         </span>
                       )}
