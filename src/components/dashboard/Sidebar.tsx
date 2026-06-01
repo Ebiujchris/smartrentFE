@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
+import { useMaintenanceStore } from "@/store/maintenanceStore";
 
 const menuItems = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
@@ -64,10 +65,12 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { logout } = useAuthStore();
+  const { logout, user } = useAuthStore();
   const { isMobileMenuOpen, toggleMobileMenu } = useSidebar();
+  const pendingCount = useMaintenanceStore((state) => state.pendingCount);
 
   const isActive = (href: string) => pathname === href;
+  const showPendingBadge = ['LANDLORD', 'PROPERTY_MANAGER', 'ADMIN'].includes(user?.role);
 
   const handleLogout = () => {
     logout();
@@ -145,6 +148,11 @@ export default function Sidebar() {
               >
                 <Icon className="h-5 w-5 flex-shrink-0" />
                 <span className="font-medium">{item.name}</span>
+                {item.name === "Maintenance" && showPendingBadge && pendingCount > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                    {pendingCount}
+                  </span>
+                )}
               </Link>
             );
           })}

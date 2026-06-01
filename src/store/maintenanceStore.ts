@@ -7,6 +7,7 @@ import {
 
 interface MaintenanceStore {
   requests: any[];
+  pendingCount: number;
   loading: boolean;
   error: string | null;
   fetchRequests: () => Promise<void>;
@@ -19,6 +20,7 @@ interface MaintenanceStore {
 
 export const useMaintenanceStore = create<MaintenanceStore>((set) => ({
   requests: [],
+  pendingCount: 0,
   loading: false,
   error: null,
 
@@ -26,7 +28,8 @@ export const useMaintenanceStore = create<MaintenanceStore>((set) => ({
     set({ loading: true, error: null });
     try {
       const requests = await maintenanceService.getAllRequests();
-      set({ requests, loading: false });
+      const pendingCount = requests.filter((r: any) => r.status === 'PENDING').length;
+      set({ requests, pendingCount, loading: false });
     } catch (error: any) {
       set({ error: error.message, loading: false });
     }
@@ -66,10 +69,17 @@ export const useMaintenanceStore = create<MaintenanceStore>((set) => ({
     set({ loading: true, error: null });
     try {
       const updated = await maintenanceService.updateStatus(id, status, notes);
-      set((state) => ({
-        requests: state.requests.map((r) => (r.id === id ? updated : r)),
-        loading: false,
-      }));
+      set((state) => {
+        const oldRequest = state.requests.find((r) => r.id === id);
+        const wasPending = oldRequest?.status === 'PENDING';
+        const nowCompleted = status === 'COMPLETED';
+        const pendingDelta = wasPending && nowCompleted ? -1 : 0;
+        return {
+          requests: state.requests.map((r) => (r.id === id ? updated : r)),
+          pendingCount: Math.max(0, state.pendingCount + pendingDelta),
+          loading: false,
+        };
+      });
       return updated;
     } catch (error: any) {
       set({ error: error.message, loading: false });
@@ -96,6 +106,7 @@ export const useMaintenanceStore = create<MaintenanceStore>((set) => ({
     console.log("[MaintenanceStore] Resetting all maintenance data");
     set({
       requests: [],
+      pendingCount: 0,
       loading: false,
       error: null,
     });

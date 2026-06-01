@@ -62,6 +62,11 @@ export const tenantService = {
     return response.data;
   },
 
+  async getCurrentTenant(): Promise<Tenant> {
+    const response = await api.get('/tenants/current');
+    return response.data;
+  },
+
   async updateTenant(id: string, data: UpdateTenantDto): Promise<Tenant> {
     const response = await api.patch(`/tenants/${id}`, data);
     return response.data;

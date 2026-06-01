@@ -34,7 +34,7 @@ export default function TenantDashboardLayout({
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto" suppressHydrationWarning></div>
           <p className="mt-4 text-slate-600">Loading...</p>
         </div>
       </div>

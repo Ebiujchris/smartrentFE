@@ -52,10 +52,8 @@ export default function TenantMaintenancePage() {
     const fetchTenantUnit = async () => {
       try {
         if (user?.tenantProfile?.id) {
-          // Get the tenant's active lease to determine their unit
-          const tenant = await tenantService.getTenantById(user.tenantProfile.id);
+          const tenant = await tenantService.getCurrentTenant();
           if (tenant?.leases && tenant.leases.length > 0) {
-            // Get the most recent or active lease
             const activeLeases = tenant.leases.filter(
               (lease: any) => lease.status === "ACTIVE" || lease.status === "active"
             );
@@ -92,7 +90,6 @@ export default function TenantMaintenancePage() {
         title: formData.title,
         description: formData.description,
         priority: formData.priority,
-        tenantId: user?.tenantProfile?.id || user?.id || "",
         unitId: tenantUnit.unitId,
       });
 

@@ -2,7 +2,6 @@ import api from '@/lib/api';
 
 export interface CreateMaintenanceDto {
   unitId: string;
-  tenantId: string;
   title: string;
   description: string;
   priority?: string;
