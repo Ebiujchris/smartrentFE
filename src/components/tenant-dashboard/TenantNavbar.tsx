@@ -46,7 +46,7 @@ export default function TenantNavbar() {
             <p className="text-sm font-medium text-slate-900 truncate max-w-[150px]">
               {user?.fullName}
             </p>
-            <p className="text-xs text-slate-500">Tenant</p>
+            <p className="text-xs text-slate-500 capitalize">{user?.role}</p>
           </div>
         </div>
       </div>

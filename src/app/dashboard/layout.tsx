@@ -21,8 +21,29 @@ export default function DashboardLayout({
   }, []);
 
   useEffect(() => {
-    if (mounted && (!token || !user)) {
-      router.push("/login");
+    if (mounted) {
+      // Check if user is authenticated
+      if (!token || !user) {
+        router.push("/login");
+        return;
+      }
+
+      // SECURITY: Verify user has proper role for landlord dashboard
+      // Only LANDLORD and PROPERTY_MANAGER roles can access this dashboard
+      const allowedRoles = ["LANDLORD", "PROPERTY_MANAGER"];
+      if (!allowedRoles.includes(user.role)) {
+        console.warn(
+          `[Security] Unauthorized access attempt: User with role '${user.role}' tried to access landlord dashboard`,
+        );
+        
+        // Redirect tenant users to tenant dashboard
+        if (user.role === "TENANT") {
+          router.push("/tenant-dashboard");
+        } else {
+          // Redirect unknown roles to login
+          router.push("/login");
+        }
+      }
     }
   }, [token, user, router, mounted]);
 
@@ -38,8 +59,14 @@ export default function DashboardLayout({
     );
   }
 
-  // Show loading if not authenticated
+  // Show loading if not authenticated or role not authorized
   if (!token || !user) {
+    return null;
+  }
+
+  // SECURITY: Prevent rendering dashboard if user role is not authorized
+  const allowedRoles = ["LANDLORD", "PROPERTY_MANAGER"];
+  if (!allowedRoles.includes(user.role)) {
     return null;
   }
 

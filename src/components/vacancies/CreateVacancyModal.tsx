@@ -43,17 +43,18 @@ export default function CreateVacancyModal({ open, onOpenChange, units, onSucces
     highlights: "",
     contactName: user?.fullName || "",
     contactPhone: "",
-    contactEmail: user?.email || "",
     availableFrom: new Date().toISOString().split("T")[0],
   });
 
   const vacantUnits = units.filter((u) => u.status === "VACANT");
 
   useEffect(() => {
-    if (open && vacantUnits.length > 0 && !formData.unitId) {
-      setFormData((prev) => ({ ...prev, unitId: vacantUnits[0].id }));
+    if (open && units.length > 0 && !formData.unitId) {
+      // Default to first vacant unit if available, otherwise first unit
+      const defaultUnit = vacantUnits.length > 0 ? vacantUnits[0] : units[0];
+      setFormData((prev) => ({ ...prev, unitId: defaultUnit.id }));
     }
-  }, [open, vacantUnits, formData.unitId]);
+  }, [open, units, vacantUnits, formData.unitId]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -105,7 +106,7 @@ export default function CreateVacancyModal({ open, onOpenChange, units, onSucces
     setImages((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.unitId) {
       toast.error("Please select a unit");
@@ -121,7 +122,6 @@ export default function CreateVacancyModal({ open, onOpenChange, units, onSucces
         highlights: formData.highlights.split(",").map(h => h.trim()).filter(Boolean),
         contactName: formData.contactName,
         contactPhone: formData.contactPhone,
-        contactEmail: formData.contactEmail,
         images: images,
         availableFrom: formData.availableFrom,
       });
@@ -138,6 +138,9 @@ export default function CreateVacancyModal({ open, onOpenChange, units, onSucces
         title: "",
         description: "",
         highlights: "",
+        contactName: user?.fullName || "",
+        contactPhone: "",
+        availableFrom: new Date().toISOString().split("T")[0],
       });
     } catch (error: any) {
       console.error(error);
@@ -169,18 +172,18 @@ export default function CreateVacancyModal({ open, onOpenChange, units, onSucces
                 <SelectTrigger>
                   <SelectValue placeholder="Select a vacant unit" />
                 </SelectTrigger>
-                <SelectContent>
-                  {vacantUnits.map((unit) => (
-                    <SelectItem key={unit.id} value={unit.id}>
-                      {unit.property.name} - Unit {unit.unitNumber} (UGX {unit.rentAmount.toLocaleString()})
-                    </SelectItem>
-                  ))}
-                  {vacantUnits.length === 0 && (
-                    <SelectItem value="none" disabled>
-                      No vacant units available
-                    </SelectItem>
-                  )}
-                </SelectContent>
+            <SelectContent>
+                   {vacantUnits.map((unit) => (
+                     <SelectItem key={unit.id} value={unit.id}>
+                       {unit.property.name} - Unit {unit.unitNumber} (UGX {unit.rentAmount.toLocaleString()})
+                     </SelectItem>
+                   ))}
+                   {vacantUnits.length === 0 && (
+                     <SelectItem value="none" disabled>
+                       No vacant units available
+                     </SelectItem>
+                   )}
+                 </SelectContent>
               </Select>
             </div>
 
@@ -214,44 +217,36 @@ export default function CreateVacancyModal({ open, onOpenChange, units, onSucces
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Contact Name *</Label>
-                <Input
-                  required
-                  value={formData.contactName}
-                  onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>Contact Phone *</Label>
-                <Input
-                  required
-                  value={formData.contactPhone}
-                  onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
-                />
-              </div>
-            </div>
+             <div className="grid grid-cols-2 gap-4">
+               <div>
+                 <Label>Contact Name *</Label>
+                 <Input
+                   required
+                   value={formData.contactName}
+                   onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
+                 />
+               </div>
+               <div>
+                 <Label>Contact Phone *</Label>
+                 <Input
+                   required
+                   value={formData.contactPhone}
+                   onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
+                 />
+               </div>
+             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Contact Email</Label>
-                <Input
-                  type="email"
-                  value={formData.contactEmail}
-                  onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>Available From *</Label>
-                <Input
-                  type="date"
-                  required
-                  value={formData.availableFrom}
-                  onChange={(e) => setFormData({ ...formData, availableFrom: e.target.value })}
-                />
-              </div>
-            </div>
+             <div className="grid grid-cols-2 gap-4">
+               <div>
+                 <Label>Available From *</Label>
+                 <Input
+                   type="date"
+                   required
+                   value={formData.availableFrom}
+                   onChange={(e) => setFormData({ ...formData, availableFrom: e.target.value })}
+                 />
+               </div>
+             </div>
 
             {/* Image Upload Section */}
             <div>

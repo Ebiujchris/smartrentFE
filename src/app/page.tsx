@@ -2,25 +2,84 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowRight, CheckCircle2, Home, Users, CreditCard } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Home, Users, CreditCard, ChevronDown, Menu, X } from 'lucide-react';
 
 export default function LandingPage() {
+  const [showAboutDropdown, setShowAboutDropdown] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">{/* Navigation */}
       <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
         <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-8">
-          <div className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
             <div className="bg-slate-900 p-1.5 rounded-md">
               <Home className="h-5 w-5 text-emerald-400" />
             </div>
             <span className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">SmartRentUG</span>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-4">
+          </Link>
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setShowMobileMenu(!showMobileMenu)}
+            className="md:hidden p-2"
+            aria-label="Toggle menu"
+          >
+            {showMobileMenu ? (
+              <X className="h-6 w-6 text-slate-600" />
+            ) : (
+              <Menu className="h-6 w-6 text-slate-600" />
+            )}
+          </button>
+
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-2 sm:gap-4">
             <Link href="/houses-for-rent" className="text-xs sm:text-sm font-medium text-slate-600 hover:text-emerald-600 transition-colors">
               Houses for Rent
             </Link>
+            
+            {/* About Dropdown */}
+            <div className="relative group">
+              <button
+                onMouseEnter={() => setShowAboutDropdown(true)}
+                onMouseLeave={() => setShowAboutDropdown(false)}
+                className="flex items-center gap-1 text-xs sm:text-sm font-medium text-slate-600 hover:text-emerald-600 transition-colors py-2"
+              >
+                About
+                <ChevronDown className={`h-4 w-4 transition-transform ${showAboutDropdown ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {/* Dropdown Menu */}
+              <div
+                onMouseEnter={() => setShowAboutDropdown(true)}
+                onMouseLeave={() => setShowAboutDropdown(false)}
+                className={`absolute right-0 mt-0 w-48 bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden transition-all duration-200 ${
+                  showAboutDropdown ? 'opacity-100 visible' : 'opacity-0 invisible'
+                }`}
+              >
+                <Link href="/about" className="block px-4 py-3 text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors border-b border-slate-100">
+                  About Us
+                </Link>
+                <Link href="/features" className="block px-4 py-3 text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors border-b border-slate-100">
+                  Features
+                </Link>
+                <Link href="/pricing" className="block px-4 py-3 text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors border-b border-slate-100">
+                  Pricing
+                </Link>
+                <Link href="/contact" className="block px-4 py-3 text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors">
+                  Contact
+                </Link>
+              </div>
+            </div>
+
             <Link href="/login" className="text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
               Sign In
             </Link>
@@ -29,6 +88,52 @@ export default function LandingPage() {
             </Button>
           </div>
         </div>
+
+        {/* Mobile Navigation Menu */}
+        {isMounted && showMobileMenu && (
+          <div className="md:hidden bg-white border-t border-slate-200">
+            <Link href="/houses-for-rent" className="block px-4 py-3 text-sm text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 transition-colors border-b border-slate-100">
+              Houses for Rent
+            </Link>
+            
+            {/* Mobile About Section */}
+            <div>
+              <button
+                onClick={() => setShowAboutDropdown(!showAboutDropdown)}
+                className="w-full flex items-center justify-between px-4 py-3 text-sm text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 transition-colors border-b border-slate-100"
+              >
+                About
+                <ChevronDown className={`h-4 w-4 transition-transform ${showAboutDropdown ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {showAboutDropdown && (
+                <div className="bg-slate-50">
+                  <Link href="/about" className="block px-8 py-2 text-sm text-slate-600 hover:text-emerald-600 transition-colors">
+                    About Us
+                  </Link>
+                  <Link href="/features" className="block px-8 py-2 text-sm text-slate-600 hover:text-emerald-600 transition-colors">
+                    Features
+                  </Link>
+                  <Link href="/pricing" className="block px-8 py-2 text-sm text-slate-600 hover:text-emerald-600 transition-colors">
+                    Pricing
+                  </Link>
+                  <Link href="/contact" className="block px-8 py-2 text-sm text-slate-600 hover:text-emerald-600 transition-colors border-b border-slate-100">
+                    Contact
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            <Link href="/login" className="block px-4 py-3 text-sm text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 transition-colors border-b border-slate-100">
+              Sign In
+            </Link>
+            <div className="p-4">
+              <Button asChild className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-full h-10 text-sm">
+                <Link href="/register">Get Started</Link>
+              </Button>
+            </div>
+          </div>
+        )}
       </header>
 
       <main className="flex-1">

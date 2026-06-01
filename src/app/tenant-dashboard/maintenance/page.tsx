@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { tenantService } from "@/services/tenant.service";
 
 export default function TenantMaintenancePage() {
   const { requests, loading, fetchRequests, createRequest } =
@@ -38,31 +39,66 @@ export default function TenantMaintenancePage() {
   const { user } = useAuthStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [tenantUnit, setTenantUnit] = useState<any>(null);
+  const [unitLoading, setUnitLoading] = useState(true);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     priority: "MEDIUM",
   });
 
+  // Fetch tenant's current unit on component mount
   useEffect(() => {
+    const fetchTenantUnit = async () => {
+      try {
+        if (user?.tenantProfile?.id) {
+          // Get the tenant's active lease to determine their unit
+          const tenant = await tenantService.getTenantById(user.tenantProfile.id);
+          if (tenant?.leases && tenant.leases.length > 0) {
+            // Get the most recent or active lease
+            const activeLeases = tenant.leases.filter(
+              (lease: any) => lease.status === "ACTIVE" || lease.status === "active"
+            );
+            const lease = activeLeases[0] || tenant.leases[0];
+            if (lease?.unitId) {
+              setTenantUnit(lease);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch tenant unit:", error);
+      } finally {
+        setUnitLoading(false);
+      }
+    };
+
+    fetchTenantUnit();
     fetchRequests();
-  }, [fetchRequests]);
+  }, [fetchRequests, user?.tenantProfile?.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!tenantUnit?.unitId) {
+      toast.error("Unable to submit request", {
+        description: "We couldn't find your current unit. Please contact support.",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      // For tenant reporting, we need tenantId and unitId.
-      // We simulate or use the profile if available.
       await createRequest({
         title: formData.title,
         description: formData.description,
         priority: formData.priority,
         tenantId: user?.tenantProfile?.id || user?.id || "",
-        unitId: "pending_unit_id", // In a full app, this comes from the tenant's active lease
+        unitId: tenantUnit.unitId,
       });
 
-      toast.success("Maintenance request submitted successfully");
+      toast.success("Maintenance request submitted successfully", {
+        description: "Your landlord will see this issue and respond soon.",
+      });
       setIsModalOpen(false);
       setFormData({ title: "", description: "", priority: "MEDIUM" });
     } catch (error: any) {
@@ -110,7 +146,7 @@ export default function TenantMaintenancePage() {
             Maintenance
           </h1>
           <p className="text-sm sm:text-base text-slate-600 mt-1">
-            Report issues and track repairs
+            Report issues to your landlord and track repairs
           </p>
         </div>
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -118,16 +154,17 @@ export default function TenantMaintenancePage() {
             <Button
               size="sm"
               className="bg-emerald-500 hover:bg-emerald-600 w-full sm:w-auto"
+              disabled={unitLoading || !tenantUnit?.unitId}
             >
               <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              Report Issue
+              {unitLoading ? "Loading..." : "Report Issue"}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Report Maintenance Issue</DialogTitle>
               <DialogDescription>
-                Describe the issue you are facing and set a priority level.
+                Describe the issue you're experiencing. Your landlord will receive this request and respond to you.
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -139,12 +176,12 @@ export default function TenantMaintenancePage() {
                   onChange={(e) =>
                     setFormData({ ...formData, title: e.target.value })
                   }
-                  placeholder="e.g., Leaking Faucet"
+                  placeholder="e.g., Leaking Faucet, Broken Door, etc."
                   required
                 />
               </div>
               <div>
-                <Label htmlFor="priority">Priority</Label>
+                <Label htmlFor="priority">Priority Level</Label>
                 <Select
                   value={formData.priority}
                   onValueChange={(value) =>
@@ -165,14 +202,14 @@ export default function TenantMaintenancePage() {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="description">Detailed Description</Label>
                 <Textarea
                   id="description"
                   value={formData.description}
                   onChange={(e) =>
                     setFormData({ ...formData, description: e.target.value })
                   }
-                  placeholder="Please describe the issue in detail..."
+                  placeholder="Please describe the issue in detail so your landlord can address it quickly..."
                   required
                   rows={4}
                 />
@@ -193,7 +230,7 @@ export default function TenantMaintenancePage() {
                   {isSubmitting ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    "Submit Request"
+                    "Submit Request to Landlord"
                   )}
                 </Button>
               </div>
@@ -201,6 +238,20 @@ export default function TenantMaintenancePage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {!tenantUnit?.unitId && !unitLoading && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="flex gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+            <div>
+              <h3 className="font-semibold text-amber-900">No Active Lease</h3>
+              <p className="text-sm text-amber-800 mt-1">
+                We couldn't find an active lease for your account. Please contact your landlord to report maintenance issues.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {requests.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12">

@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Home, MapPin, Bed, Bath, Phone, Mail, ArrowLeft, Search, Loader2 } from 'lucide-react';
 import { vacantListingService, VacantListing } from '@/services/vacant-listing.service';
+import PropertyCarousel from '@/components/properties/PropertyCarousel';
 import { toast } from 'sonner';
 
 export default function HousesForRentPage() {
@@ -117,23 +117,18 @@ export default function HousesForRentPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {listings.map((listing) => (
               <Card key={listing.id} className="overflow-hidden border-0 shadow-md hover:shadow-xl transition-shadow flex flex-col group bg-white">
-                <div className="relative h-64 w-full bg-slate-100 overflow-hidden">
-                  {listing.images && listing.images.length > 0 ? (
-                    <Image
-                      src={listing.images[0]}
-                      alt={listing.title}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center bg-slate-100 text-slate-400">
-                      <Home className="h-12 w-12 opacity-50" />
-                    </div>
-                  )}
-                  <div className="absolute top-4 left-4 bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-sm uppercase tracking-wider">
-                    Available
-                  </div>
+            <div className="overflow-hidden">
+              {listing.images && listing.images.length > 0 ? (
+                <PropertyCarousel images={listing.images} title={listing.title} />
+              ) : (
+                <div className="relative h-64 w-full bg-slate-100 flex items-center justify-center rounded-t-lg border-b border-slate-200">
+                  <Home className="h-12 w-12 text-slate-400 opacity-50" />
                 </div>
+              )}
+              <div className="absolute top-4 left-4 bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-sm uppercase tracking-wider z-20">
+                Available
+              </div>
+            </div>
                 
                 <CardContent className="p-6 flex-1 flex flex-col">
                   <div className="flex justify-between items-start mb-2 gap-4">
@@ -185,33 +180,19 @@ export default function HousesForRentPage() {
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-1 gap-2 pt-2">
-                      <Button 
-                        variant="default" 
-                        className="w-full bg-slate-900 hover:bg-slate-800 text-white"
-                        onClick={() => {
-                          incrementView(listing.id);
-                          window.location.href = `tel:${listing.contactPhone}`;
-                        }}
-                      >
-                        <Phone className="h-4 w-4 mr-2" />
-                        {listing.contactPhone}
-                      </Button>
-                      
-                      {listing.contactEmail && (
-                        <Button 
-                          variant="outline" 
-                          className="w-full"
-                          onClick={() => {
-                            incrementView(listing.id);
-                            window.location.href = `mailto:${listing.contactEmail}`;
-                          }}
-                        >
-                          <Mail className="h-4 w-4 mr-2" />
-                          Email Landlord
-                        </Button>
-                      )}
-                    </div>
+              <div className="grid grid-cols-1 gap-2 pt-2">
+                <Button 
+                  variant="default" 
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white"
+                  onClick={() => {
+                    incrementView(listing.id);
+                    window.location.href = `tel:${listing.contactPhone}`;
+                  }}
+                >
+                  <Phone className="h-4 w-4 mr-2" />
+                  {listing.contactPhone}
+                </Button>
+              </div>
                   </div>
                 </CardFooter>
               </Card>

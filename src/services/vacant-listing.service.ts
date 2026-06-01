@@ -7,7 +7,6 @@ export interface CreateVacantListingDto {
   highlights: string[];
   contactName: string;
   contactPhone: string;
-  contactEmail?: string;
   images: string[];
   availableFrom: string;
 }
@@ -18,7 +17,6 @@ export interface UpdateVacantListingDto {
   highlights?: string[];
   contactName?: string;
   contactPhone?: string;
-  contactEmail?: string;
   images?: string[];
   availableFrom?: string;
   isActive?: boolean;

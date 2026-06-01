@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Home, MapPin, Eye, Pencil, Trash2, Loader2, ExternalLink } from "lucide-react";
+import { Plus, Home, MapPin, Eye, Trash2, Loader2, ExternalLink, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { vacantListingService, VacantListing } from "@/services/vacant-listing.service";
-import { propertyService, Property, Unit } from "@/services/property.service";
+import { propertyService, Property } from "@/services/property.service";
 import CreateVacancyModal from "@/components/vacancies/CreateVacancyModal";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -16,10 +16,9 @@ export default function VacanciesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -52,6 +51,41 @@ export default function VacanciesPage() {
       setIsDeleting(null);
     }
   };
+
+  const openGallery = (images: string[]) => {
+    setGalleryImages(images);
+    setCurrentImageIndex(0);
+    setGalleryOpen(true);
+  };
+
+  const closeGallery = () => {
+    setGalleryOpen(false);
+    setGalleryImages([]);
+    setCurrentImageIndex(0);
+  };
+
+  const goToPrevious = () => {
+    setCurrentImageIndex((prev) => (prev === 0 ? galleryImages.length - 1 : prev - 1));
+  };
+
+  const goToNext = () => {
+    setCurrentImageIndex((prev) => (prev === galleryImages.length - 1 ? 0 : prev + 1));
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!galleryOpen) return;
+      if (e.key === 'Escape') closeGallery();
+      if (e.key === 'ArrowLeft') goToPrevious();
+      if (e.key === 'ArrowRight') goToNext();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [galleryOpen]);
 
   // Flatten units from properties and map to the required interface for the modal
   const allUnits = properties.flatMap((p) => 
@@ -115,13 +149,18 @@ export default function VacanciesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {listings.map((listing) => (
             <Card key={listing.id} className="overflow-hidden shadow-sm flex flex-col group border-slate-200 hover:border-emerald-200 hover:shadow-md transition-all">
-              <div className="relative h-48 w-full bg-slate-100 border-b border-slate-100">
+              <div className="relative h-48 w-full bg-slate-100 border-b border-slate-100 cursor-pointer" onClick={() => listing.images && listing.images.length > 0 && openGallery(listing.images)}>
                 {listing.images && listing.images.length > 0 ? (
-                  <img
-                    src={listing.images[0]}
-                    alt={listing.title}
-                    className="w-full h-full object-cover"
-                  />
+                  <>
+                    <img
+                      src={listing.images[0]}
+                      alt={listing.title}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-all flex items-center justify-center opacity-0 hover:opacity-100">
+                      <span className="text-white text-sm font-medium bg-black/50 px-3 py-1 rounded-full">{listing.images.length} photo{listing.images.length > 1 ? 's' : ''}</span>
+                    </div>
+                  </>
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center text-slate-400">
                     <Home className="h-10 w-10 opacity-30" />
@@ -191,6 +230,54 @@ export default function VacanciesPage() {
           units={allUnits}
           onSuccess={fetchData}
         />
+      )}
+
+      {galleryOpen && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center" onClick={closeGallery}>
+          <div className="relative w-full h-full flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={closeGallery}
+              className="absolute top-4 right-4 text-white hover:text-slate-300 z-10"
+            >
+              <X className="h-6 w-6" />
+            </button>
+
+            {galleryImages.length > 1 && (
+              <>
+                <button
+                  onClick={goToPrevious}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-slate-300 z-10 bg-black/50 rounded-full p-2"
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </button>
+                <button
+                  onClick={goToNext}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-slate-300 z-10 bg-black/50 rounded-full p-2"
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </button>
+              </>
+            )}
+
+            <img
+              src={galleryImages[currentImageIndex]}
+              alt={`Photo ${currentImageIndex + 1}`}
+              className="max-w-full max-h-full object-contain"
+            />
+
+            {galleryImages.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                {galleryImages.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentImageIndex(idx)}
+                    className={`w-2 h-2 rounded-full ${idx === currentImageIndex ? 'bg-white' : 'bg-white/50'}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
