@@ -169,8 +169,9 @@ export default function TenantPaymentsPage() {
                         </Button>
                       ) : (
                         <span className="text-slate-500 text-xs">
-                          Paid on{" "}
-                          {new Date(payment.paidDate).toLocaleDateString()}
+                          {payment.paidDate
+                            ? `Paid on ${new Date(payment.paidDate).toLocaleDateString()}`
+                            : "Paid"}
                         </span>
                       )}
                     </td>

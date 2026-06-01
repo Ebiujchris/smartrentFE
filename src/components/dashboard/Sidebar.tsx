@@ -16,9 +16,13 @@ import {
   Settings,
   LogOut,
   X,
+  MessageCircle,
+  FileText,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useMaintenanceStore } from "@/store/maintenanceStore";
+import { useNotificationStore } from "@/store/notificationStore";
+import SupportChatModal from "@/components/support/SupportChatModal";
 
 const menuItems = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
@@ -28,6 +32,7 @@ const menuItems = [
   { name: "Vacancies", href: "/dashboard/vacancies", icon: Home },
   { name: "Payments", href: "/dashboard/payments", icon: CreditCard },
   { name: "Maintenance", href: "/dashboard/maintenance", icon: Wrench },
+  { name: "Lease Agreements", href: "/dashboard/contracts", icon: FileText },
   { name: "Reports", href: "/dashboard/reports", icon: BarChart3 },
   { name: "Notifications", href: "/dashboard/notifications", icon: Bell },
 ];
@@ -68,6 +73,8 @@ export default function Sidebar() {
   const { logout, user } = useAuthStore();
   const { isMobileMenuOpen, toggleMobileMenu } = useSidebar();
   const pendingCount = useMaintenanceStore((state) => state.pendingCount);
+  const unreadCount = useNotificationStore((state) => state.unreadCount);
+  const [showSupportChat, setShowSupportChat] = useState(false);
 
   const isActive = (href: string) => pathname === href;
   const showPendingBadge = user?.role ? ['LANDLORD', 'PROPERTY_MANAGER', 'ADMIN'].includes(user.role) : false;
@@ -153,6 +160,11 @@ export default function Sidebar() {
                     {pendingCount}
                   </span>
                 )}
+                {item.name === "Notifications" && unreadCount > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -160,6 +172,15 @@ export default function Sidebar() {
 
         {/* Bottom Menu */}
         <div className="p-4 space-y-1 border-t border-slate-800">
+          {/* Customer Support Button */}
+          <button
+            onClick={() => setShowSupportChat(true)}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-slate-300 hover:bg-slate-800 hover:text-white w-full"
+          >
+            <MessageCircle className="h-5 w-5 flex-shrink-0" />
+            <span className="font-medium">Customer Support</span>
+          </button>
+
           {bottomItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
@@ -198,6 +219,12 @@ export default function Sidebar() {
           © 2026 SmartRentUG
         </div>
       </aside>
+
+      {/* Support Chat Modal */}
+      <SupportChatModal
+        isOpen={showSupportChat}
+        onClose={() => setShowSupportChat(false)}
+      />
     </>
   );
 }

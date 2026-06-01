@@ -366,8 +366,9 @@ export default function PaymentsPage() {
                         ) : (
                           <div className="flex flex-col md:flex-row items-start md:items-center gap-2">
                             <span className="text-slate-500 text-xs">
-                              Paid on{" "}
-                              {new Date(payment.paidDate).toLocaleDateString()}
+                              {payment.paidDate
+                                ? `Paid on ${new Date(payment.paidDate).toLocaleDateString()}`
+                                : "Paid"}
                             </span>
                             <Button
                               size="sm"

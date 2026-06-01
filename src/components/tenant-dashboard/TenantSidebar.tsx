@@ -3,7 +3,7 @@
 import { useState, createContext, useContext } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, CreditCard, Wrench, LogOut, X } from "lucide-react";
+import { LayoutDashboard, CreditCard, Wrench, LogOut, X, FileText } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 
 // Create context for mobile menu state
@@ -65,6 +65,11 @@ export default function TenantSidebar() {
       title: "Payments",
       icon: CreditCard,
       path: "/tenant-dashboard/payments",
+    },
+    {
+      title: "Lease Agreements",
+      icon: FileText,
+      path: "/tenant-dashboard/contracts",
     },
     {
       title: "Maintenance",
