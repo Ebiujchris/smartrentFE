@@ -306,8 +306,13 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="bg-white py-10 border-t border-slate-200">
-        <div className="container mx-auto px-4 md:px-8 text-center text-slate-500 text-sm">
-          &copy; {new Date().getFullYear()} SmartRentUG. All rights reserved.
+        <div className="container mx-auto px-4 md:px-8 text-center">
+          <p className="text-slate-500 text-sm mb-2">
+            &copy; {new Date().getFullYear()} SmartRentUG. All rights reserved.
+          </p>
+          <p className="text-slate-400 text-xs">
+            Made by <span className="font-semibold text-emerald-600">INFINITI ANALYTICS</span>
+          </p>
         </div>
       </footer>
     </div>

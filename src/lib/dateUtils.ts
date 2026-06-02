@@ -5,13 +5,17 @@ export function formatDate(
   date: string | Date | null | undefined,
   options?: Intl.DateTimeFormatOptions
 ): string {
-  if (!date) return "N/A";
+  if (!date) {
+    console.warn('formatDate: date is null or undefined');
+    return "N/A";
+  }
   
   try {
     const dateObj = typeof date === 'string' ? new Date(date) : date;
     
     // Check if date is valid
     if (isNaN(dateObj.getTime())) {
+      console.warn('formatDate: Invalid date:', date, 'Type:', typeof date);
       return "N/A";
     }
     
@@ -20,7 +24,8 @@ export function formatDate(
       month: "long",
       day: "numeric",
     });
-  } catch {
+  } catch (error) {
+    console.error('formatDate: Error formatting date:', date, error);
     return "N/A";
   }
 }

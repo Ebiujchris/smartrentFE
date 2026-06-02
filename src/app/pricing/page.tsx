@@ -1,4 +1,5 @@
 'use client';
+// Updated pricing - 2026-06-02
 
 import Link from 'next/link';
 import { Check, ArrowRight } from 'lucide-react';
@@ -11,10 +12,10 @@ export default function PricingPage() {
       name: 'Starter',
       price: '75,000',
       period: '/month',
-      units: '15 Units',
+      units: '5 Units',
       description: 'Perfect for small-scale landlords starting out',
       features: [
-        'Manage up to 15 rental units',
+        'Manage up to 5 rental units',
         'Tenant management',
         'Rent tracking & payment recording',
         'Lease management',
@@ -31,10 +32,10 @@ export default function PricingPage() {
       name: 'Professional',
       price: '150,000',
       period: '/month',
-      units: '30 Units',
+      units: '20 Units',
       description: 'Most popular for growing property portfolios',
       features: [
-        'Manage up to 30 rental units',
+        'Manage up to 20 rental units',
         'Everything in Starter, plus:',
         'Advanced analytics & reports',
         'Priority support',
@@ -49,7 +50,7 @@ export default function PricingPage() {
     {
       id: 'PREMIUM',
       name: 'Premium',
-      price: '250,000',
+      price: '300,000',
       period: '/month',
       units: 'Unlimited',
       description: 'Enterprise-grade solution for large portfolios',

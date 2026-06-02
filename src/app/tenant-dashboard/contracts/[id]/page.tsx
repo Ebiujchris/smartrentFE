@@ -53,6 +53,9 @@ export default function TenantContractDetailPage() {
     try {
       setIsLoading(true);
       const response = await api.get(`/contracts/${contractId}`);
+      console.log('Contract data received:', response.data);
+      console.log('Start Date:', response.data.startDate, 'Type:', typeof response.data.startDate);
+      console.log('End Date:', response.data.endDate, 'Type:', typeof response.data.endDate);
       setContract(response.data);
     } catch (error) {
       ErrorHandler.handleApiError(error);
@@ -221,11 +224,21 @@ export default function TenantContractDetailPage() {
           <div className="space-y-3">
             <div>
               <p className="text-xs text-slate-500">Start Date</p>
-              <p className="text-sm font-medium text-slate-900">{formatDate(contract.startDate)}</p>
+              <p className="text-sm font-medium text-slate-900">
+                {formatDate(contract.startDate)}
+                {formatDate(contract.startDate) === 'N/A' && contract.startDate && (
+                  <span className="text-xs text-red-500 ml-2">({String(contract.startDate)})</span>
+                )}
+              </p>
             </div>
             <div>
               <p className="text-xs text-slate-500">End Date</p>
-              <p className="text-sm font-medium text-slate-900">{formatDate(contract.endDate)}</p>
+              <p className="text-sm font-medium text-slate-900">
+                {formatDate(contract.endDate)}
+                {formatDate(contract.endDate) === 'N/A' && contract.endDate && (
+                  <span className="text-xs text-red-500 ml-2">({String(contract.endDate)})</span>
+                )}
+              </p>
             </div>
             <div>
               <p className="text-xs text-slate-500">Duration</p>
