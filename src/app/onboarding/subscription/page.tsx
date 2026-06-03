@@ -11,7 +11,7 @@ const plans = [
     id: 'STARTER',
     name: 'Starter',
     price: 75000,
-    units: '15 Units',
+    units: '5 Units',
     features: [
       'Tenant management',
       'Rent tracking & payment recording',
@@ -28,7 +28,7 @@ const plans = [
     id: 'PROFESSIONAL',
     name: 'Professional',
     price: 150000,
-    units: '30 Units',
+    units: '20 Units',
     popular: true,
     features: [
       'Tenant management',
@@ -45,7 +45,7 @@ const plans = [
   {
     id: 'PREMIUM',
     name: 'Premium',
-    price: 250000,
+    price: 300000,
     units: 'Unlimited Units',
     features: [
       'Tenant management',

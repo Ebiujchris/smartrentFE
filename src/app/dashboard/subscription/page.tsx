@@ -45,8 +45,8 @@ export default function SubscriptionPage() {
       id: 'STARTER', 
       name: 'Starter', 
       price: 75000, 
-      units: '15 Units',
-      maxUnits: 15,
+      units: '5 Units',
+      maxUnits: 5,
       features: [
         'Tenant management',
         'Rent tracking & payment recording',
@@ -63,8 +63,8 @@ export default function SubscriptionPage() {
       id: 'PROFESSIONAL', 
       name: 'Professional', 
       price: 150000, 
-      units: '30 Units',
-      maxUnits: 30,
+      units: '20 Units',
+      maxUnits: 20,
       popular: true,
       features: [
         'Tenant management',
@@ -81,7 +81,7 @@ export default function SubscriptionPage() {
     { 
       id: 'PREMIUM', 
       name: 'Premium', 
-      price: 250000, 
+      price: 300000, 
       units: 'Unlimited Units',
       maxUnits: 9999,
       features: [

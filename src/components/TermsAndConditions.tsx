@@ -61,9 +61,9 @@ export function TermsAndConditions({ open, onClose }: TermsAndConditionsProps) {
               <div className="bg-slate-50 p-4 rounded-lg my-3">
                 <h4 className="font-semibold mb-2">Current Plans:</h4>
                 <ul className="space-y-2">
-                  <li><strong>Starter:</strong> 1–10 Units - UGX 75,000/month</li>
-                  <li><strong>Professional:</strong> 11–20 Units - UGX 150,000/month</li>
-                  <li><strong>Premium:</strong> 21+ Units - UGX 200,000/month</li>
+                  <li><strong>Starter:</strong> 1–5 Units - UGX 75,000/month</li>
+                  <li><strong>Professional:</strong> 6–20 Units - UGX 150,000/month</li>
+                  <li><strong>Premium:</strong> 21+ Units (Unlimited) - UGX 300,000/month</li>
                 </ul>
               </div>
               <p>Subscription pricing may change with prior notice.</p>
