@@ -12,6 +12,15 @@ export function formatDate(
 
     // Handle plain objects (Prisma sometimes returns dates as objects)
     if (typeof date === 'object' && !(date instanceof Date)) {
+      // Log the actual object structure to see what we're dealing with
+      console.log('[formatDate] Object keys:', Object.keys(date), 'Values:', JSON.stringify(date));
+      
+      // Check if it's an empty object
+      if (Object.keys(date).length === 0) {
+        console.warn('[formatDate] Received empty object - date likely null in database');
+        return "N/A";
+      }
+
       // Try to extract date from object properties
       if (date.$date) {
         dateObj = new Date(date.$date);
