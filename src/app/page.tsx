@@ -160,7 +160,7 @@ export default function LandingPage() {
 
         {/* Dashboard Preview */}
         <section className="relative -mt-16 sm:-mt-24 z-20 pb-16">
-          <div className="container mx-auto px-4 md:px-8">
+          <div className="container mx-auto px-4 md:px-8 max-w-5xl">
             <div className="rounded-xl bg-white/5 p-2 ring-1 ring-white/10 backdrop-blur lg:rounded-2xl lg:p-4 shadow-2xl">
               <div className="overflow-hidden rounded-lg bg-white ring-1 ring-slate-900/5 shadow-sm">
                 <Image
