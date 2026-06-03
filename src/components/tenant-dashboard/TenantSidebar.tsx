@@ -45,7 +45,7 @@ export default function TenantSidebar() {
 
   const handleLogout = () => {
     logout();
-    router.push("/login");
+    router.push("/");
   };
 
   const handleLinkClick = () => {
