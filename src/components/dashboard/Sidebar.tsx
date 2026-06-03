@@ -18,7 +18,6 @@ import {
   X,
   MessageCircle,
   FileText,
-  Lock,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useSubscriptionStore } from "@/store/subscriptionStore";
@@ -96,14 +95,7 @@ export default function Sidebar() {
     router.push("/");
   };
 
-  const handleLinkClick = (href: string, requiresPlan?: string[]) => {
-    // Check if user has access
-    if (!hasAccess(requiresPlan)) {
-      router.push('/dashboard/subscription');
-      if (isMobileMenuOpen) toggleMobileMenu();
-      return;
-    }
-
+  const handleLinkClick = () => {
     // Close mobile menu when a link is clicked
     if (isMobileMenuOpen) {
       toggleMobileMenu();
@@ -157,37 +149,40 @@ export default function Sidebar() {
           {menuItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
-            const locked = !hasAccess(item.requiresPlan);
+            const hasAccessToItem = hasAccess(item.requiresPlan);
+
+            // Hide menu item if user doesn't have access
+            if (!hasAccessToItem) {
+              return null;
+            }
 
             return (
-              <button
+              <Link
                 key={item.name}
-                onClick={() => handleLinkClick(item.href, item.requiresPlan)}
+                href={item.href}
+                onClick={handleLinkClick}
                 className={`
-                  w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all
+                  flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all
                   ${
                     active
                       ? "bg-emerald-500/10 text-emerald-400 border-l-3 border-emerald-500"
-                      : locked
-                      ? "text-slate-500 hover:bg-slate-800/50 cursor-pointer"
                       : "text-slate-300 hover:bg-slate-800 hover:text-white"
                   }
                 `}
               >
                 <Icon className="h-5 w-5 flex-shrink-0" />
-                <span className="font-medium flex-1 text-left">{item.name}</span>
-                {locked && <Lock className="h-4 w-4 text-slate-500" />}
-                {item.name === "Maintenance" && showPendingBadge && pendingCount > 0 && !locked && (
+                <span className="font-medium flex-1">{item.name}</span>
+                {item.name === "Maintenance" && showPendingBadge && pendingCount > 0 && (
                   <span className="ml-auto bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
                     {pendingCount}
                   </span>
                 )}
-                {item.name === "Notifications" && unreadCount > 0 && !locked && (
+                {item.name === "Notifications" && unreadCount > 0 && (
                   <span className="ml-auto bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
-              </button>
+              </Link>
             );
           })}
         </nav>

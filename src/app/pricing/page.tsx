@@ -37,6 +37,7 @@ export default function PricingPage() {
       features: [
         'Manage up to 20 rental units',
         'Everything in Starter, plus:',
+        'Vacancy advertising',
         'Advanced analytics & reports',
         'Priority support',
         'Custom branding options',
