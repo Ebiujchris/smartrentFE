@@ -32,7 +32,7 @@ const menuItems = [
   { name: "Vacancies", href: "/dashboard/vacancies", icon: Home },
   { name: "Payments", href: "/dashboard/payments", icon: CreditCard },
   { name: "Maintenance", href: "/dashboard/maintenance", icon: Wrench },
-  { name: "Lease Agreements", href: "/dashboard/contracts", icon: FileText },
+  { name: "Tenancy Agreements", href: "/dashboard/contracts", icon: FileText },
   { name: "Reports", href: "/dashboard/reports", icon: BarChart3 },
   { name: "Notifications", href: "/dashboard/notifications", icon: Bell },
 ];

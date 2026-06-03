@@ -238,7 +238,7 @@ Tenant: _________________________ Date: _____________`;
           <ArrowLeft className="h-5 w-5 text-slate-600" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">New Lease Agreement</h1>
+          <h1 className="text-2xl font-bold text-slate-900">New Tenancy Agreement</h1>
           <p className="text-slate-600 mt-1">Create a new tenancy contract</p>
         </div>
       </div>

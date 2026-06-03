@@ -81,7 +81,7 @@ export default function TenantContractsPage() {
     <div className="p-4 sm:p-6 lg:p-8">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Lease Agreements</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Tenancy Agreements</h1>
         <p className="text-slate-600 mt-1">Review and manage your tenancy contracts</p>
       </div>
 
