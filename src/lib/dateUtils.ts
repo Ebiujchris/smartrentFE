@@ -5,6 +5,13 @@ export function formatDate(
   date: string | Date | null | undefined,
   options?: Intl.DateTimeFormatOptions
 ): string {
+  // Debug: Log what we're receiving
+  if (process.env.NODE_ENV === 'development') {
+    if (date === null) console.log('[formatDate] Received null');
+    else if (date === undefined) console.log('[formatDate] Received undefined');
+    else console.log('[formatDate] Received:', date, 'Type:', typeof date, 'Constructor:', date?.constructor?.name);
+  }
+
   if (!date) return "N/A";
   
   try {
@@ -12,6 +19,7 @@ export function formatDate(
     
     // Check if date is valid
     if (isNaN(dateObj.getTime())) {
+      console.warn('[formatDate] Invalid date after parsing:', date);
       return "N/A";
     }
     
@@ -21,6 +29,7 @@ export function formatDate(
       day: "numeric",
     });
   } catch (error) {
+    console.error('[formatDate] Error:', error, 'Input:', date);
     return "N/A";
   }
 }
