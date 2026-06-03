@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import PaymentReceipt from "@/components/receipts/PaymentReceipt";
-import { formatPaymentDate, isValidDate } from "@/lib/dateUtils";
+import { formatPaymentDate, isValidDate, formatDate } from "@/lib/dateUtils";
 
 export default function PaymentsPage() {
   const { payments, loading, fetchPayments, recordPayment } = usePaymentStore();
@@ -215,7 +215,7 @@ export default function PaymentsPage() {
                         </div>
                       </td>
                        <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-slate-500">
-                         {payment.dueDate ? new Date(payment.dueDate).toLocaleDateString() : '-'}
+                         {payment.dueDate ? formatDate(payment.dueDate) : '-'}
                        </td>
                       <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap">
                         <span

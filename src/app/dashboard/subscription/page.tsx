@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useSubscriptionStore } from '@/store/subscriptionStore';
 import { usePropertyStore } from '@/store/propertyStore';
 import { toast } from 'sonner';
+import { formatDate } from '@/lib/dateUtils';
 
 export default function SubscriptionPage() {
   const { user } = useAuthStore();
@@ -49,7 +50,7 @@ export default function SubscriptionPage() {
       features: [
         'Tenant management',
         'Rent tracking & payment recording',
-        'Lease management',
+        'Tenant Agreement management',
         'Maintenance request tracking',
         'Receipt generation',
         'Advanced analytics & reports',
@@ -68,7 +69,7 @@ export default function SubscriptionPage() {
       features: [
         'Tenant management',
         'Rent tracking & payment recording',
-        'Lease management',
+        'Tenant Agreement management',
         'Maintenance request tracking',
         'Receipt generation',
         'Advanced analytics & reports',
@@ -86,7 +87,7 @@ export default function SubscriptionPage() {
       features: [
         'Tenant management',
         'Rent tracking & payment recording',
-        'Lease management',
+        'Tenant Agreement management',
         'Maintenance request tracking',
         'Receipt generation',
         'Advanced analytics & reports',
@@ -121,7 +122,7 @@ export default function SubscriptionPage() {
           </div>
           <p className="text-emerald-50">
             You have {trialStatus.daysRemaining} days remaining in your free trial. 
-            No payment required until {new Date(trialStatus.trialEndsAt).toLocaleDateString()}.
+            No payment required until {formatDate(trialStatus.trialEndsAt)}.
           </p>
         </div>
       )}
@@ -143,7 +144,7 @@ export default function SubscriptionPage() {
               </p>
               {subscription.status === 'TRIAL' && trialStatus && (
                 <p className="text-sm text-slate-500 mt-2">
-                  Trial ends: {new Date(subscription.trialEndsAt).toLocaleDateString()}
+                  Trial ends: {formatDate(subscription.trialEndsAt)}
                 </p>
               )}
             </div>

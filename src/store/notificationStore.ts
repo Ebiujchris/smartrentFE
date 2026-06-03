@@ -20,6 +20,7 @@ interface NotificationState {
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   deleteNotification: (id: string) => Promise<void>;
+  reset: () => void;
 }
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
@@ -87,5 +88,15 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         error: error.response?.data?.message || 'Failed to delete notification',
       });
     }
+  },
+
+  // SECURITY: Reset method to clear all data on logout
+  reset: () => {
+    set({
+      notifications: [],
+      unreadCount: 0,
+      isLoading: false,
+      error: null,
+    });
   },
 }));

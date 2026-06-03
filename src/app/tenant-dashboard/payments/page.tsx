@@ -12,7 +12,7 @@ import {
 import { usePaymentStore } from "@/store/paymentStore";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { formatPaymentDate, isValidDate } from "@/lib/dateUtils";
+import { formatPaymentDate, isValidDate, formatDate } from "@/lib/dateUtils";
 
 export default function TenantPaymentsPage() {
   const { payments, loading, fetchPayments, recordPayment } = usePaymentStore();
@@ -132,11 +132,7 @@ export default function TenantPaymentsPage() {
                 {payments.map((payment: any) => (
                   <tr key={payment.id} className="hover:bg-slate-50">
                      <td className="px-3 sm:px-4 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs sm:text-sm text-slate-900 font-medium">
-                       {payment.dueDate ? new Date(payment.dueDate).toLocaleDateString(undefined, {
-                         year: "numeric",
-                         month: "short",
-                         day: "numeric",
-                       }) : '-'}
+                       {payment.dueDate ? formatDate(payment.dueDate) : '-'}
                      </td>
                     <td className="px-3 sm:px-4 md:px-6 py-3 md:py-4 whitespace-nowrap">
                       <div className="text-xs sm:text-sm font-semibold text-slate-900">

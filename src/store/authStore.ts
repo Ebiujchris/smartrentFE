@@ -52,6 +52,9 @@ export const useAuthStore = create<AuthState>()(
 
             const { useMaintenanceStore } = require("./maintenanceStore");
             useMaintenanceStore.getState().reset();
+
+            const { useNotificationStore } = require("./notificationStore");
+            useNotificationStore.getState().reset();
           } catch (error) {
             console.error("[AuthStore] Error clearing stores on login:", error);
           }
@@ -105,6 +108,9 @@ export const useAuthStore = create<AuthState>()(
 
             const { useMaintenanceStore } = require("./maintenanceStore");
             useMaintenanceStore.getState().reset();
+
+            const { useNotificationStore } = require("./notificationStore");
+            useNotificationStore.getState().reset();
           } catch (error) {
             console.error(
               "[AuthStore] Error clearing stores on registration:",
@@ -166,6 +172,10 @@ export const useAuthStore = create<AuthState>()(
           const { useMaintenanceStore } = require("./maintenanceStore");
           useMaintenanceStore.getState().reset();
 
+          // Reset notification store
+          const { useNotificationStore } = require("./notificationStore");
+          useNotificationStore.getState().reset();
+
           console.log("[AuthStore] All stores reset successfully");
         } catch (error) {
           console.error("[AuthStore] Error resetting stores:", error);
@@ -181,6 +191,7 @@ export const useAuthStore = create<AuthState>()(
           localStorage.removeItem("property-storage");
           localStorage.removeItem("subscription-storage");
           localStorage.removeItem("maintenance-storage");
+          localStorage.removeItem("notification-storage");
 
           // Also clear sessionStorage
           sessionStorage.clear();

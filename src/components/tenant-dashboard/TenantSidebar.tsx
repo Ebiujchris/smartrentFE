@@ -67,7 +67,7 @@ export default function TenantSidebar() {
       path: "/tenant-dashboard/payments",
     },
     {
-      title: "Lease Agreements",
+      title: "Tenant Agreements",
       icon: FileText,
       path: "/tenant-dashboard/contracts",
     },

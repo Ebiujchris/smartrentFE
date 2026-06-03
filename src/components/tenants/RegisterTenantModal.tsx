@@ -113,7 +113,7 @@ export default function RegisterTenantModal({
 
   const copyCredentials = () => {
     if (!successData) return;
-    const text = `Hello ${formData.fullName},\n\nYour tenant portal account has been created.\n\nPortal: ${window.location.origin}/login\nEmail: ${successData.email}\nPasscode: ${successData.password}\n\nPlease login to view your lease and make payments.`;
+    const text = `Hello ${formData.fullName},\n\nYour tenant portal account has been created.\n\nPortal: ${window.location.origin}/login\nEmail: ${successData.email}\nPasscode: ${successData.password}\n\nPlease login to view your agreement and make payments.`;
     navigator.clipboard.writeText(text);
     setCopied(true);
     toast.success("Credentials copied to clipboard");
@@ -282,12 +282,12 @@ export default function RegisterTenantModal({
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
                 <FileText className="h-5 w-5 text-emerald-500" />
-                <h3 className="text-lg font-semibold">Lease Details</h3>
+                <h3 className="text-lg font-semibold">Agreement Details</h3>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="startDate">Lease Start Date *</Label>
+                  <Label htmlFor="startDate">Agreement Start Date *</Label>
                   <Input
                     id="startDate"
                     type="date"
@@ -301,7 +301,7 @@ export default function RegisterTenantModal({
                 </div>
 
                 <div>
-                  <Label htmlFor="endDate">Lease End Date *</Label>
+                  <Label htmlFor="endDate">Agreement End Date *</Label>
                   <Input
                     id="endDate"
                     type="date"
@@ -384,7 +384,7 @@ export default function RegisterTenantModal({
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <p className="text-sm text-blue-900">
                   Create a portal account for the tenant to view payments,
-                  submit maintenance requests, and manage their lease online.
+                  submit maintenance requests, and manage their agreement online.
                 </p>
               </div>
 
@@ -447,7 +447,7 @@ export default function RegisterTenantModal({
                     UGX {formData.rentAmount?.toLocaleString()}
                   </span>
 
-                  <span className="text-slate-600">Lease Period:</span>
+                  <span className="text-slate-600">Agreement Period:</span>
                   <span className="font-medium">
                     {formData.startDate} to {formData.endDate}
                   </span>

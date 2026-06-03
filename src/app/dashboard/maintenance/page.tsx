@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useMaintenanceStore } from '@/store/maintenanceStore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { formatDate } from '@/lib/dateUtils';
 
 export default function MaintenancePage() {
   const { requests, loading, fetchRequests, updateStatus } = useMaintenanceStore();
@@ -124,7 +125,7 @@ export default function MaintenancePage() {
                       <span className="font-medium">Tenant:</span> {request.tenant.user.fullName}
                     </div>
                      <div>
-                       <span className="font-medium">Reported:</span> {request.reportedAt ? new Date(request.reportedAt).toLocaleDateString() : '-'}
+                       <span className="font-medium">Reported:</span> {request.reportedAt ? formatDate(request.reportedAt) : '-'}
                      </div>
                   </div>
                 </div>

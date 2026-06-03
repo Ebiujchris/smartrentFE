@@ -29,6 +29,7 @@ import api from "@/lib/api";
 import RegisterTenantModal from "@/components/tenants/RegisterTenantModal";
 import { unitService } from "@/services/unit.service";
 import { useTenantStore } from "@/store/tenantStore";
+import { formatDate } from "@/lib/dateUtils";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -262,19 +263,13 @@ function UnitDetailPanel({
                       <div>
                         <p className="text-slate-500 text-xs">Start Date</p>
                         <p className="font-medium text-slate-800">
-                           {activeLease.startDate ? new Date(activeLease.startDate).toLocaleDateString(
-                             undefined,
-                             { year: "numeric", month: "short", day: "numeric" },
-                           ) : '-'}
+                           {activeLease.startDate ? formatDate(activeLease.startDate) : '-'}
                          </p>
                       </div>
                       <div>
                         <p className="text-slate-500 text-xs">End Date</p>
                          <p className="font-medium text-slate-800">
-                           {activeLease.endDate ? new Date(activeLease.endDate).toLocaleDateString(
-                             undefined,
-                             { year: "numeric", month: "short", day: "numeric" },
-                           ) : '-'}
+                           {activeLease.endDate ? formatDate(activeLease.endDate) : '-'}
                          </p>
                       </div>
                       <div>
@@ -318,7 +313,7 @@ function UnitDetailPanel({
                                 UGX {Number(p.amount).toLocaleString()}
                               </p>
                                <p className="text-xs text-slate-500">
-                                 Due: {p.dueDate ? new Date(p.dueDate).toLocaleDateString() : '-'}
+                                 Due: {p.dueDate ? formatDate(p.dueDate) : '-'}
                                </p>
                             </div>
                             <span

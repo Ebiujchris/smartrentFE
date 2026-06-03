@@ -11,7 +11,7 @@ export function formatDate(
   }
   
   try {
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    const dateObj = new Date(date as any);
     
     // Check if date is valid
     if (isNaN(dateObj.getTime())) {
@@ -37,7 +37,7 @@ export function isValidDate(date: string | Date | null | undefined): boolean {
   if (!date) return false;
   
   try {
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    const dateObj = new Date(date as any);
     return !isNaN(dateObj.getTime());
   } catch {
     return false;

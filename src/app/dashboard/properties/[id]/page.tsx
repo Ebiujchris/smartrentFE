@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { usePropertyStore } from "@/store/propertyStore";
 import type { Lease, Property, Unit } from "@/services/property.service";
+import { formatDate } from "@/lib/dateUtils";
 
 function statusColor(status: string) {
   switch (status) {
@@ -226,8 +227,8 @@ export default function PropertyDetailsPage() {
                         <div className="flex items-center gap-2 text-sm text-slate-600 pt-1">
                           <Calendar className="h-4 w-4" />
                           <span>
-                            Lease ends{" "}
-                            {new Date(activeLease.endDate).toLocaleDateString()}
+                            Agreement ends{" "}
+                            {formatDate(activeLease.endDate)}
                           </span>
                         </div>
                       )}

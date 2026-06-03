@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { tenantService } from "@/services/tenant.service";
+import { formatDate } from "@/lib/dateUtils";
 
 export default function TenantMaintenancePage() {
   const { requests, loading, fetchRequests, createRequest } =
@@ -293,9 +294,7 @@ export default function TenantMaintenancePage() {
               <div className="text-xs text-slate-500 flex items-center gap-1">
                 <Clock className="h-3 w-3" />
                 Reported on{" "}
-                {new Date(
-                  request.createdAt || request.reportedAt,
-                ).toLocaleDateString()}
+                {formatDate(request.createdAt || request.reportedAt)}
               </div>
             </div>
           ))}
