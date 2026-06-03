@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, createContext, useContext } from "react";
+import { useState, createContext, useContext, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -18,8 +18,10 @@ import {
   X,
   MessageCircle,
   FileText,
+  Lock,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
+import { useSubscriptionStore } from "@/store/subscriptionStore";
 import { useMaintenanceStore } from "@/store/maintenanceStore";
 import { useNotificationStore } from "@/store/notificationStore";
 import SupportChatModal from "@/components/support/SupportChatModal";
@@ -29,7 +31,7 @@ const menuItems = [
   { name: "Properties", href: "/dashboard/properties", icon: Building2 },
   { name: "Units", href: "/dashboard/units", icon: DoorOpen },
   { name: "Tenants", href: "/dashboard/tenants", icon: Users },
-  { name: "Vacancies", href: "/dashboard/vacancies", icon: Home },
+  { name: "Vacancies", href: "/dashboard/vacancies", icon: Home, requiresPlan: ['PROFESSIONAL', 'PREMIUM'] },
   { name: "Payments", href: "/dashboard/payments", icon: CreditCard },
   { name: "Maintenance", href: "/dashboard/maintenance", icon: Wrench },
   { name: "Tenancy Agreements", href: "/dashboard/contracts", icon: FileText },
@@ -71,20 +73,37 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { logout, user } = useAuthStore();
+  const { subscription, fetchSubscription } = useSubscriptionStore();
   const { isMobileMenuOpen, toggleMobileMenu } = useSidebar();
   const pendingCount = useMaintenanceStore((state) => state.pendingCount);
   const unreadCount = useNotificationStore((state) => state.unreadCount);
   const [showSupportChat, setShowSupportChat] = useState(false);
 
+  useEffect(() => {
+    fetchSubscription();
+  }, [fetchSubscription]);
+
   const isActive = (href: string) => pathname === href;
   const showPendingBadge = user?.role ? ['LANDLORD', 'PROPERTY_MANAGER', 'ADMIN'].includes(user.role) : false;
+
+  const hasAccess = (requiresPlan?: string[]) => {
+    if (!requiresPlan) return true;
+    return requiresPlan.includes(subscription?.plan || '');
+  };
 
   const handleLogout = () => {
     logout();
     router.push("/");
   };
 
-  const handleLinkClick = () => {
+  const handleLinkClick = (href: string, requiresPlan?: string[]) => {
+    // Check if user has access
+    if (!hasAccess(requiresPlan)) {
+      router.push('/dashboard/subscription');
+      if (isMobileMenuOpen) toggleMobileMenu();
+      return;
+    }
+
     // Close mobile menu when a link is clicked
     if (isMobileMenuOpen) {
       toggleMobileMenu();
@@ -138,34 +157,37 @@ export default function Sidebar() {
           {menuItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
+            const locked = !hasAccess(item.requiresPlan);
 
             return (
-              <Link
+              <button
                 key={item.name}
-                href={item.href}
-                onClick={handleLinkClick}
+                onClick={() => handleLinkClick(item.href, item.requiresPlan)}
                 className={`
-                  flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all
+                  w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all
                   ${
                     active
                       ? "bg-emerald-500/10 text-emerald-400 border-l-3 border-emerald-500"
+                      : locked
+                      ? "text-slate-500 hover:bg-slate-800/50 cursor-pointer"
                       : "text-slate-300 hover:bg-slate-800 hover:text-white"
                   }
                 `}
               >
                 <Icon className="h-5 w-5 flex-shrink-0" />
-                <span className="font-medium">{item.name}</span>
-                {item.name === "Maintenance" && showPendingBadge && pendingCount > 0 && (
+                <span className="font-medium flex-1 text-left">{item.name}</span>
+                {locked && <Lock className="h-4 w-4 text-slate-500" />}
+                {item.name === "Maintenance" && showPendingBadge && pendingCount > 0 && !locked && (
                   <span className="ml-auto bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
                     {pendingCount}
                   </span>
                 )}
-                {item.name === "Notifications" && unreadCount > 0 && (
+                {item.name === "Notifications" && unreadCount > 0 && !locked && (
                   <span className="ml-auto bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
-              </Link>
+              </button>
             );
           })}
         </nav>

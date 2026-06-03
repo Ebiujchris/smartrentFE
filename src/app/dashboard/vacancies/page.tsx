@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Home, MapPin, Eye, Trash2, Loader2, ExternalLink, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Plus, Home, MapPin, Eye, Trash2, Loader2, ExternalLink, ChevronLeft, ChevronRight, X, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { vacantListingService, VacantListing } from "@/services/vacant-listing.service";
 import { propertyService, Property } from "@/services/property.service";
+import { useSubscriptionStore } from "@/store/subscriptionStore";
 import CreateVacancyModal from "@/components/vacancies/CreateVacancyModal";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -19,8 +20,18 @@ export default function VacanciesPage() {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const { subscription, fetchSubscription } = useSubscriptionStore();
+
+  // Check if user has access to vacancy feature (Professional or Premium only)
+  const hasVacancyAccess = subscription?.plan === 'PROFESSIONAL' || subscription?.plan === 'PREMIUM';
+
+  useEffect(() => {
+    fetchSubscription();
+  }, [fetchSubscription]);
 
   const fetchData = async () => {
+    if (!hasVacancyAccess) return;
+    
     setIsLoading(true);
     try {
       const [listingsData, propertiesData] = await Promise.all([
@@ -74,7 +85,7 @@ export default function VacanciesPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [hasVacancyAccess]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -100,6 +111,52 @@ export default function VacanciesPage() {
       }
     }))
   );
+
+  // Show upgrade prompt if user doesn't have access
+  if (!hasVacancyAccess) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        <Card className="max-w-2xl mx-auto mt-12 border-2 border-emerald-100">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mb-6">
+              <Lock className="h-10 w-10 text-emerald-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 mb-3">
+              Upgrade to Access Vacancy Advertising
+            </h2>
+            <p className="text-slate-600 max-w-md mb-8">
+              The vacancy advertising feature is available on Professional and Premium plans. 
+              Advertise your vacant units publicly to attract more tenants.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button 
+                asChild
+                className="bg-emerald-500 hover:bg-emerald-600 text-white"
+              >
+                <Link href="/dashboard/subscription">
+                  View Subscription Plans
+                </Link>
+              </Button>
+              <Button 
+                asChild
+                variant="outline"
+                className="border-slate-200"
+              >
+                <Link href="/dashboard">
+                  Back to Dashboard
+                </Link>
+              </Button>
+            </div>
+            <div className="mt-8 p-4 bg-slate-50 rounded-lg max-w-md">
+              <p className="text-sm text-slate-600">
+                <span className="font-semibold text-slate-900">Current Plan:</span> {subscription?.plan || 'Starter'} Plan
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
