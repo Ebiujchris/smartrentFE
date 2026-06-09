@@ -61,7 +61,7 @@ export default function LoginPage() {
         <CardHeader className="space-y-1 text-center px-4 sm:px-6 pt-6 pb-4">
           <CardTitle className="text-xl sm:text-2xl font-bold text-slate-900">Welcome back</CardTitle>
           <CardDescription className="text-sm sm:text-base text-slate-500">
-            Enter your email and password to access your dashboard
+            Enter your email/phone and password to access your dashboard
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
@@ -73,11 +73,11 @@ export default function LoginPage() {
             )}
             
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-slate-700 text-sm">Email</Label>
+              <Label htmlFor="email" className="text-slate-700 text-sm">Email or Phone Number</Label>
               <Input 
                 id="email" 
-                type="email" 
-                placeholder="manager@example.com" 
+                type="text" 
+                placeholder="email@example.com or 0700000000" 
                 required 
                 value={formData.email}
                 onChange={handleChange}
