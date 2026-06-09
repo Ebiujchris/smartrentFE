@@ -8,22 +8,40 @@ import { useSubscriptionStore } from '@/store/subscriptionStore';
 import { usePropertyStore } from '@/store/propertyStore';
 import { toast } from 'sonner';
 import { formatDate } from '@/lib/dateUtils';
+import PaymentModal from '@/components/subscription/PaymentModal';
 
 export default function SubscriptionPage() {
   const { user } = useAuthStore();
   const { subscription, trialStatus, loading, fetchSubscription, updateSubscription, fetchTrialStatus } = useSubscriptionStore();
   const { properties } = usePropertyStore();
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedPlanForPayment, setSelectedPlanForPayment] = useState<{name: string; price: number; id: string} | null>(null);
 
   useEffect(() => {
     fetchSubscription();
     fetchTrialStatus();
   }, [fetchSubscription, fetchTrialStatus]);
 
-  const handleSelectPlan = async (plan: string) => {
-    setSelectedPlan(plan);
+  const handleSelectPlan = async (plan: any) => {
+    // If subscription is expired or expiring, show payment modal
+    const isExpired = subscription?.status === 'EXPIRED' || (subscription?.status === 'TRIAL' && trialStatus?.expired);
+    const isExpiringSoon = subscription?.status === 'TRIAL' && trialStatus?.daysRemaining && trialStatus.daysRemaining <= 7;
+    
+    if (isExpired || isExpiringSoon) {
+      setSelectedPlanForPayment({
+        name: plan.name,
+        price: plan.price,
+        id: plan.id,
+      });
+      setPaymentModalOpen(true);
+      return;
+    }
+
+    // Otherwise, allow free plan switch (during trial)
+    setSelectedPlan(plan.id);
     try {
-      await updateSubscription({ plan: plan as any });
+      await updateSubscription({ plan: plan.id as any });
       toast.success('Plan updated successfully!', {
         description: 'You have 30 days free trial. No payment required.',
       });
@@ -35,6 +53,12 @@ export default function SubscriptionPage() {
     } finally {
       setSelectedPlan(null);
     }
+  };
+
+  const handlePaymentSuccess = () => {
+    fetchSubscription();
+    fetchTrialStatus();
+    toast.success('Subscription renewed successfully!');
   };
 
   // Calculate units used
@@ -218,7 +242,7 @@ export default function SubscriptionPage() {
 
               <Button 
                 className={`w-full mt-6 ${subscription?.plan === plan.id ? 'bg-slate-400 cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-600'}`}
-                onClick={() => handleSelectPlan(plan.id)}
+                onClick={() => handleSelectPlan(plan)}
                 disabled={subscription?.plan === plan.id || selectedPlan === plan.id}
               >
                 {selectedPlan === plan.id ? (
@@ -236,6 +260,16 @@ export default function SubscriptionPage() {
           ))}
         </div>
       </div>
+
+      {/* Payment Modal */}
+      {paymentModalOpen && selectedPlanForPayment && (
+        <PaymentModal
+          isOpen={paymentModalOpen}
+          onClose={() => setPaymentModalOpen(false)}
+          plan={selectedPlanForPayment}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
 
       {/* Payment Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
