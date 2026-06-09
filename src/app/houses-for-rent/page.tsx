@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Home, MapPin, Bed, Bath, Phone, Mail, ArrowLeft, Search, Loader2 } from 'lucide-react';
+import { Home, MapPin, Bed, Bath, Phone, Mail, ArrowLeft, Search, Loader2, Eye, Lock } from 'lucide-react';
 import { vacantListingService, VacantListing } from '@/services/vacant-listing.service';
 import PropertyCarousel from '@/components/properties/PropertyCarousel';
+import ContactRevealModal from '@/components/listings/ContactRevealModal';
 import { toast } from 'sonner';
 
 export default function HousesForRentPage() {
@@ -15,6 +16,17 @@ export default function HousesForRentPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [purchasedContacts, setPurchasedContacts] = useState<Record<string, { contactName: string; contactPhone: string; contactEmail?: string }>>({});
+  const [selectedListing, setSelectedListing] = useState<string | null>(null);
+  const [buyerPhone, setBuyerPhone] = useState<string>('');
+
+  // Load buyer phone from localStorage
+  useEffect(() => {
+    const storedPhone = localStorage.getItem('buyerPhone');
+    if (storedPhone) {
+      setBuyerPhone(storedPhone);
+    }
+  }, []);
 
   // Debounce search
   useEffect(() => {
@@ -27,6 +39,13 @@ export default function HousesForRentPage() {
   useEffect(() => {
     fetchListings();
   }, [debouncedSearch]);
+
+  // Check purchased contacts when listings load or buyer phone changes
+  useEffect(() => {
+    if (listings.length > 0 && buyerPhone) {
+      checkPurchasedContacts();
+    }
+  }, [listings, buyerPhone]);
 
   const fetchListings = async () => {
     setIsLoading(true);
@@ -43,12 +62,83 @@ export default function HousesForRentPage() {
     }
   };
 
+  const checkPurchasedContacts = async () => {
+    if (!buyerPhone) return;
+
+    try {
+      // Check each listing if already purchased
+      const checks = await Promise.all(
+        listings.map(async (listing) => {
+          try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/contact-purchases/check`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                listingId: listing.id,
+                buyerPhone: buyerPhone,
+              }),
+            });
+            const data = await response.json();
+            
+            if (data.hasPurchased) {
+              // Fetch contact details
+              const contactResponse = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/contact-purchases/contact?listingId=${listing.id}&buyerPhone=${buyerPhone}`
+              );
+              if (contactResponse.ok) {
+                const contact = await contactResponse.json();
+                return { listingId: listing.id, contact };
+              }
+            }
+          } catch (error) {
+            // Silently fail individual checks
+          }
+          return null;
+        })
+      );
+
+      // Build purchased contacts map
+      const purchasedMap: Record<string, any> = {};
+      checks.forEach((check) => {
+        if (check) {
+          purchasedMap[check.listingId] = check.contact;
+        }
+      });
+      setPurchasedContacts(purchasedMap);
+    } catch (error) {
+      console.error('Failed to check purchased contacts:', error);
+    }
+  };
+
   const incrementView = async (id: string) => {
     try {
       await vacantListingService.incrementViewCount(id);
     } catch (error) {
       // Silently fail view count increment
     }
+  };
+
+  const handleOpenPaymentModal = (listingId: string) => {
+    setSelectedListing(listingId);
+  };
+
+  const handlePaymentSuccess = (contact: { contactName: string; contactPhone: string; contactEmail?: string }, buyerPhone: string) => {
+    if (selectedListing) {
+      setPurchasedContacts((prev) => ({
+        ...prev,
+        [selectedListing]: contact,
+      }));
+      
+      // Store buyer phone for future visits
+      setBuyerPhone(buyerPhone);
+      localStorage.setItem('buyerPhone', buyerPhone);
+    }
+    setSelectedListing(null);
+  };
+
+  const maskPhoneNumber = (phone: string) => {
+    if (phone.length <= 4) return '*** *** ***';
+    return phone.substring(0, 4) + ' XXX XXX';
   };
 
   return (
@@ -172,27 +262,64 @@ export default function HousesForRentPage() {
                   <div className="w-full space-y-3 pt-4">
                     <div className="flex items-center gap-2 text-sm">
                       <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold">
-                        {listing.contactName.charAt(0)}
+                        {purchasedContacts[listing.id]?.contactName?.charAt(0) || listing.contactName.charAt(0)}
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-medium text-slate-900">{listing.contactName}</span>
+                        <span className="font-medium text-slate-900">
+                          {purchasedContacts[listing.id]?.contactName || listing.contactName}
+                        </span>
                         <span className="text-xs text-slate-500">Landlord / Manager</span>
                       </div>
                     </div>
                     
-              <div className="grid grid-cols-1 gap-2 pt-2">
-                <Button 
-                  variant="default" 
-                  className="w-full bg-slate-900 hover:bg-slate-800 text-white"
-                  onClick={() => {
-                    incrementView(listing.id);
-                    window.location.href = `tel:${listing.contactPhone}`;
-                  }}
-                >
-                  <Phone className="h-4 w-4 mr-2" />
-                  {listing.contactPhone}
-                </Button>
-              </div>
+                    {purchasedContacts[listing.id] ? (
+                      <div className="grid grid-cols-1 gap-2 pt-2">
+                        <Button 
+                          variant="default" 
+                          className="w-full bg-slate-900 hover:bg-slate-800 text-white"
+                          onClick={() => {
+                            incrementView(listing.id);
+                            window.location.href = `tel:${purchasedContacts[listing.id].contactPhone}`;
+                          }}
+                        >
+                          <Phone className="h-4 w-4 mr-2" />
+                          {purchasedContacts[listing.id].contactPhone}
+                        </Button>
+                        {purchasedContacts[listing.id].contactEmail && (
+                          <Button 
+                            variant="outline" 
+                            className="w-full"
+                            onClick={() => {
+                              window.location.href = `mailto:${purchasedContacts[listing.id].contactEmail}`;
+                            }}
+                          >
+                            <Mail className="h-4 w-4 mr-2" />
+                            Email Landlord
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-2 pt-2">
+                        <div className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200">
+                          <div className="flex items-center gap-2">
+                            <Lock className="h-4 w-4 text-slate-400" />
+                            <span className="text-sm font-medium text-slate-600">
+                              {maskPhoneNumber(listing.contactPhone)}
+                            </span>
+                          </div>
+                          <span className="text-xs text-slate-500 bg-white px-2 py-1 rounded border border-slate-200">
+                            Hidden
+                          </span>
+                        </div>
+                        <Button 
+                          className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
+                          onClick={() => handleOpenPaymentModal(listing.id)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Pay UGX 10,000 to View Contact
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardFooter>
               </Card>
@@ -207,6 +334,16 @@ export default function HousesForRentPage() {
           &copy; {new Date().getFullYear()} SmartRentUG. All rights reserved.
         </div>
       </footer>
+
+      {/* Payment Modal */}
+      {selectedListing && (
+        <ContactRevealModal
+          isOpen={!!selectedListing}
+          onClose={() => setSelectedListing(null)}
+          listingId={selectedListing}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
     </div>
   );
 }
