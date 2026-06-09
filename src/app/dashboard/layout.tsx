@@ -7,6 +7,7 @@ import Sidebar, { SidebarProvider } from "@/components/dashboard/Sidebar";
 import Navbar from "@/components/dashboard/Navbar";
 import ToastProvider from "@/components/providers/ToastProvider";
 import SubscriptionGuard from "@/components/subscription/SubscriptionGuard";
+import SubscriptionExpiryBanner from "@/components/subscription/SubscriptionExpiryBanner";
 
 export default function DashboardLayout({
   children,
@@ -80,6 +81,7 @@ export default function DashboardLayout({
             <Sidebar />
 
             <div className="flex flex-col flex-1 min-w-0" suppressHydrationWarning>
+              <SubscriptionExpiryBanner />
               <Navbar />
               <main className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-5 lg:space-y-6 flex-1" suppressHydrationWarning>
                 {children}
