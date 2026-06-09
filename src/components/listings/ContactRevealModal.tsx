@@ -46,14 +46,33 @@ export default function ContactRevealModal({ isOpen, onClose, listingId, onSucce
         formattedNumber = "256" + formattedNumber;
       }
 
-      // TODO: Initiate actual payment
-      // For now, simulate payment
+      // Initiate payment with Flutterwave
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/contact-purchases/initiate-payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          listingId,
+          buyerPhone: formattedNumber,
+          buyerEmail: buyerEmail || undefined,
+          buyerName: buyerName || undefined,
+          paymentMethod,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        setStatus("failed");
+        toast.error(result.message || "Payment initiation failed");
+        return;
+      }
+
+      // Payment initiated successfully
       setStatus("pending_pin");
+      const txRef = result.txRef;
       
-      // Simulate payment verification delay
-      setTimeout(() => {
-        verifyPayment("TXN" + Date.now(), formattedNumber);
-      }, 3000);
+      // Poll for payment verification
+      pollPaymentStatus(txRef, formattedNumber);
 
     } catch (error) {
       console.error("Payment error:", error);
@@ -62,48 +81,62 @@ export default function ContactRevealModal({ isOpen, onClose, listingId, onSucce
     }
   };
 
-  const verifyPayment = async (transactionId: string, phone: string) => {
-    try {
-      // Create purchase record
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/contact-purchases/purchase`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          listingId,
-          buyerPhone: phone,
-          buyerEmail: buyerEmail || undefined,
-          buyerName: buyerName || undefined,
-          paymentMethod,
-          transactionId,
-        }),
-      });
+  const pollPaymentStatus = async (txRef: string, phone: string) => {
+    let attempts = 0;
+    const maxAttempts = 30; // Poll for 2 minutes (30 * 4 seconds)
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Purchase failed");
+    const poll = async () => {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/contact-purchases/verify-and-purchase`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              txRef,
+              listingId,
+              buyerPhone: phone,
+              buyerEmail: buyerEmail || undefined,
+              buyerName: buyerName || undefined,
+              paymentMethod,
+            }),
+          }
+        );
+
+        const result = await response.json();
+
+        if (result.success && result.contact) {
+          setStatus("success");
+          toast.success("Payment successful!");
+          
+          setTimeout(() => {
+            onSuccess(result.contact, phone);
+            onClose();
+          }, 1500);
+        } else if (result.status === 'failed') {
+          setStatus("failed");
+          toast.error("Payment failed. Please try again.");
+        } else {
+          attempts++;
+          if (attempts < maxAttempts) {
+            setTimeout(poll, 4000); // Poll every 4 seconds
+          } else {
+            setStatus("failed");
+            toast.error("Payment verification timeout. Please contact support if amount was deducted.");
+          }
+        }
+      } catch (error) {
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 4000);
+        } else {
+          setStatus("failed");
+          toast.error("Verification failed. Please contact support.");
+        }
       }
+    };
 
-      // Get contact info
-      const contactResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/contact-purchases/contact?listingId=${listingId}&buyerPhone=${phone}`
-      );
-      
-      if (!contactResponse.ok) throw new Error("Failed to get contact");
-      
-      const contact = await contactResponse.json();
-
-      setStatus("success");
-      toast.success("Contact revealed successfully!");
-      
-      setTimeout(() => {
-        onSuccess(contact, phone);
-        onClose();
-      }, 1500);
-    } catch (error: any) {
-      console.error("Purchase error:", error);
-      setStatus("failed");
-      toast.error(error.message || "Failed to complete purchase");
-    }
+    poll();
   };
 
   const handleRetry = () => {
