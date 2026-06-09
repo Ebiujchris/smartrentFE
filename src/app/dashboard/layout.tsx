@@ -6,6 +6,7 @@ import { useAuthStore } from "@/store/authStore";
 import Sidebar, { SidebarProvider } from "@/components/dashboard/Sidebar";
 import Navbar from "@/components/dashboard/Navbar";
 import ToastProvider from "@/components/providers/ToastProvider";
+import SubscriptionGuard from "@/components/subscription/SubscriptionGuard";
 
 export default function DashboardLayout({
   children,
@@ -74,16 +75,18 @@ export default function DashboardLayout({
     <>
       <ToastProvider />
       <SidebarProvider>
-        <div className="flex min-h-screen bg-slate-50" suppressHydrationWarning>
-          <Sidebar />
+        <SubscriptionGuard>
+          <div className="flex min-h-screen bg-slate-50" suppressHydrationWarning>
+            <Sidebar />
 
-          <div className="flex flex-col flex-1 min-w-0" suppressHydrationWarning>
-            <Navbar />
-            <main className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-5 lg:space-y-6 flex-1" suppressHydrationWarning>
-              {children}
-            </main>
+            <div className="flex flex-col flex-1 min-w-0" suppressHydrationWarning>
+              <Navbar />
+              <main className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-5 lg:space-y-6 flex-1" suppressHydrationWarning>
+                {children}
+              </main>
+            </div>
           </div>
-        </div>
+        </SubscriptionGuard>
       </SidebarProvider>
     </>
   );
