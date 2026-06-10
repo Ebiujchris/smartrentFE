@@ -10,6 +10,7 @@ import { vacantListingService, VacantListing } from '@/services/vacant-listing.s
 import PropertyCarousel from '@/components/properties/PropertyCarousel';
 import ContactRevealModal from '@/components/listings/ContactRevealModal';
 import { toast } from 'sonner';
+import { getApiEndpoint } from '@/lib/api-url';
 
 export default function HousesForRentPage() {
   const [listings, setListings] = useState<VacantListing[]>([]);
@@ -70,7 +71,7 @@ export default function HousesForRentPage() {
       const checks = await Promise.all(
         listings.map(async (listing) => {
           try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/contact-purchases/check`, {
+            const response = await fetch(getApiEndpoint('/contact-purchases/check'), {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -83,7 +84,7 @@ export default function HousesForRentPage() {
             if (data.hasPurchased) {
               // Fetch contact details
               const contactResponse = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/contact-purchases/contact?listingId=${listing.id}&buyerPhone=${buyerPhone}`
+                getApiEndpoint(`/contact-purchases/contact?listingId=${listing.id}&buyerPhone=${buyerPhone}`)
               );
               if (contactResponse.ok) {
                 const contact = await contactResponse.json();

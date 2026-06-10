@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { getApiEndpoint } from "@/lib/api-url";
 
 interface ContactRevealModalProps {
   isOpen: boolean;
@@ -46,7 +47,7 @@ export default function ContactRevealModal({ isOpen, onClose, listingId, onSucce
       }
 
       // Initiate payment with Pesapal
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/contact-purchases/initiate-payment`, {
+      const response = await fetch(getApiEndpoint('/contact-purchases/initiate-payment'), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -99,7 +100,7 @@ export default function ContactRevealModal({ isOpen, onClose, listingId, onSucce
     const poll = async () => {
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/contact-purchases/verify-and-purchase`,
+          getApiEndpoint('/contact-purchases/verify-and-purchase'),
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
