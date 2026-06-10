@@ -20,7 +20,6 @@ export default function ContactRevealModal({ isOpen, onClose, listingId, onSucce
   const [buyerPhone, setBuyerPhone] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
   const [buyerName, setBuyerName] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"MTN" | "AIRTEL">("MTN");
   const [status, setStatus] = useState<PaymentStatus>("form");
 
   if (!isOpen) return null;
@@ -46,16 +45,15 @@ export default function ContactRevealModal({ isOpen, onClose, listingId, onSucce
         formattedNumber = "256" + formattedNumber;
       }
 
-      // Initiate payment with Flutterwave
+      // Initiate payment with Pesapal
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/contact-purchases/initiate-payment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           listingId,
           buyerPhone: formattedNumber,
-          buyerEmail: buyerEmail || undefined,
-          buyerName: buyerName || undefined,
-          paymentMethod,
+          buyerEmail: buyerEmail || `buyer${Date.now()}@smartrentug.com`,
+          buyerName: buyerName || "Buyer",
         }),
       });
 
@@ -67,12 +65,25 @@ export default function ContactRevealModal({ isOpen, onClose, listingId, onSucce
         return;
       }
 
-      // Payment initiated successfully
-      setStatus("pending_pin");
-      const txRef = result.txRef;
-      
-      // Poll for payment verification
-      pollPaymentStatus(txRef, formattedNumber);
+      // Store payment info in localStorage for when user returns
+      localStorage.setItem('pending_contact_purchase', JSON.stringify({
+        listingId,
+        buyerPhone: formattedNumber,
+        buyerEmail,
+        buyerName,
+        txRef: result.txRef,
+        timestamp: Date.now(),
+      }));
+
+      // Redirect to Pesapal payment page
+      if (result.redirectUrl) {
+        toast.success("Redirecting to payment page...");
+        window.location.href = result.redirectUrl;
+      } else {
+        // Fallback: poll for payment status
+        setStatus("pending_pin");
+        pollPaymentStatus(result.txRef, formattedNumber);
+      }
 
     } catch (error) {
       console.error("Payment error:", error);
@@ -93,12 +104,11 @@ export default function ContactRevealModal({ isOpen, onClose, listingId, onSucce
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              txRef,
+              orderTrackingId: txRef,
               listingId,
               buyerPhone: phone,
               buyerEmail: buyerEmail || undefined,
               buyerName: buyerName || undefined,
-              paymentMethod,
             }),
           }
         );
@@ -108,6 +118,9 @@ export default function ContactRevealModal({ isOpen, onClose, listingId, onSucce
         if (result.success && result.contact) {
           setStatus("success");
           toast.success("Payment successful!");
+          
+          // Clear pending purchase from localStorage
+          localStorage.removeItem('pending_contact_purchase');
           
           setTimeout(() => {
             onSuccess(result.contact, phone);
@@ -161,31 +174,6 @@ export default function ContactRevealModal({ isOpen, onClose, listingId, onSucce
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Payment Method */}
-              <div>
-                <Label className="text-sm font-semibold mb-2 block">Payment Method</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod("MTN")}
-                    className={`p-4 border-2 rounded-lg transition-all ${
-                      paymentMethod === "MTN" ? "border-yellow-500 bg-yellow-50" : "border-slate-200"
-                    }`}
-                  >
-                    <div className="font-semibold">MTN MoMo</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod("AIRTEL")}
-                    className={`p-4 border-2 rounded-lg transition-all ${
-                      paymentMethod === "AIRTEL" ? "border-red-500 bg-red-50" : "border-slate-200"
-                    }`}
-                  >
-                    <div className="font-semibold">Airtel Money</div>
-                  </button>
-                </div>
-              </div>
-
               {/* Phone Number */}
               <div>
                 <Label htmlFor="buyerPhone">Your Phone Number *</Label>
@@ -199,7 +187,7 @@ export default function ContactRevealModal({ isOpen, onClose, listingId, onSucce
                   className="mt-1"
                 />
                 <p className="text-xs text-slate-500 mt-1">
-                  Enter the number registered with {paymentMethod} Mobile Money
+                  Enter your Uganda mobile number
                 </p>
               </div>
 
@@ -254,13 +242,13 @@ export default function ContactRevealModal({ isOpen, onClose, listingId, onSucce
             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
               <Phone className="h-8 w-8 text-blue-600" />
             </div>
-            <p className="text-lg font-semibold text-slate-900 mb-2">Check Your Phone</p>
+            <p className="text-lg font-semibold text-slate-900 mb-2">Complete Payment</p>
             <p className="text-sm text-slate-600 mb-4">
-              A payment request has been sent to your phone
+              Follow the instructions on the payment page to complete your purchase
             </p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-800">
-                📱 Enter your {paymentMethod} Mobile Money PIN on your phone to complete the payment
+                📱 Waiting for payment confirmation...
               </p>
             </div>
             <Loader2 className="h-6 w-6 animate-spin text-slate-400 mx-auto mt-4" />
