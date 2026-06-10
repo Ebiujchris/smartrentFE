@@ -12,77 +12,77 @@ function PaymentCallbackContent() {
   const [message, setMessage] = useState("Verifying your payment...");
 
   useEffect(() => {
-    verifyPayment();
-  }, []);
+    const verifyPayment = async () => {
+      try {
+        // Get order tracking ID from URL
+        const orderTrackingId = searchParams.get("OrderTrackingId");
+        const merchantReference = searchParams.get("OrderMerchantReference");
 
-  const verifyPayment = async () => {
-    try {
-      // Get order tracking ID from URL
-      const orderTrackingId = searchParams.get("OrderTrackingId");
-      const merchantReference = searchParams.get("OrderMerchantReference");
-
-      if (!orderTrackingId && !merchantReference) {
-        setStatus("failed");
-        setMessage("Invalid payment callback");
-        return;
-      }
-
-      // Get pending purchase from localStorage
-      const pendingPurchase = localStorage.getItem("pending_contact_purchase");
-      
-      if (!pendingPurchase) {
-        setStatus("failed");
-        setMessage("Payment session expired");
-        return;
-      }
-
-      const purchaseData = JSON.parse(pendingPurchase);
-
-      // Verify payment with backend
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/contact-purchases/verify-and-purchase`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            orderTrackingId: orderTrackingId || merchantReference,
-            listingId: purchaseData.listingId,
-            buyerPhone: purchaseData.buyerPhone,
-            buyerEmail: purchaseData.buyerEmail,
-            buyerName: purchaseData.buyerName,
-          }),
+        if (!orderTrackingId && !merchantReference) {
+          setStatus("failed");
+          setMessage("Invalid payment callback");
+          return;
         }
-      );
 
-      const result = await response.json();
-
-      if (result.success && result.contact) {
-        setStatus("success");
-        setMessage("Payment successful! Contact details revealed.");
+        // Get pending purchase from localStorage
+        const pendingPurchase = localStorage.getItem("pending_contact_purchase");
         
-        // Store contact in localStorage
-        localStorage.setItem(
-          `contact_${purchaseData.listingId}`,
-          JSON.stringify(result.contact)
+        if (!pendingPurchase) {
+          setStatus("failed");
+          setMessage("Payment session expired");
+          return;
+        }
+
+        const purchaseData = JSON.parse(pendingPurchase);
+
+        // Verify payment with backend
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/contact-purchases/verify-and-purchase`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              orderTrackingId: orderTrackingId || merchantReference,
+              listingId: purchaseData.listingId,
+              buyerPhone: purchaseData.buyerPhone,
+              buyerEmail: purchaseData.buyerEmail,
+              buyerName: purchaseData.buyerName,
+            }),
+          }
         );
-        
-        // Clear pending purchase
-        localStorage.removeItem("pending_contact_purchase");
 
-        // Redirect back to houses page after 2 seconds
-        setTimeout(() => {
-          router.push("/houses-for-rent");
-        }, 2000);
-      } else {
+        const result = await response.json();
+
+        if (result.success && result.contact) {
+          setStatus("success");
+          setMessage("Payment successful! Contact details revealed.");
+          
+          // Store contact in localStorage
+          localStorage.setItem(
+            `contact_${purchaseData.listingId}`,
+            JSON.stringify(result.contact)
+          );
+          
+          // Clear pending purchase
+          localStorage.removeItem("pending_contact_purchase");
+
+          // Redirect back to houses page after 2 seconds
+          setTimeout(() => {
+            router.push("/houses-for-rent");
+          }, 2000);
+        } else {
+          setStatus("failed");
+          setMessage(result.message || "Payment verification failed");
+        }
+      } catch (error) {
+        console.error("Verification error:", error);
         setStatus("failed");
-        setMessage(result.message || "Payment verification failed");
+        setMessage("Failed to verify payment. Please contact support.");
       }
-    } catch (error) {
-      console.error("Verification error:", error);
-      setStatus("failed");
-      setMessage("Failed to verify payment. Please contact support.");
-    }
-  };
+    };
+
+    verifyPayment();
+  }, [searchParams, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
