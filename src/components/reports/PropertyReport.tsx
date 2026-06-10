@@ -30,7 +30,7 @@ export default function PropertyReport() {
   };
 
   const handleExportExcel = () => {
-    if (!data) return;
+    if (!data || !data.properties) return;
     const excelData = data.properties.map(p => ({
       Property: p.name,
       Address: p.address,
@@ -46,7 +46,7 @@ export default function PropertyReport() {
   };
 
   const handleExportPDF = () => {
-    if (!data) return;
+    if (!data || !data.properties) return;
     const headers = ['Property', 'Total Units', 'Occupied', 'Vacant', 'Occupancy', 'Total Rent'];
     const pdfData = data.properties.map(p => [
       p.name,
@@ -68,7 +68,7 @@ export default function PropertyReport() {
     );
   }
 
-  if (!data) {
+  if (!data || !data.properties || !data.summary) {
     return <Card><CardContent className="py-10 text-center text-slate-500">No data available</CardContent></Card>;
   }
 
