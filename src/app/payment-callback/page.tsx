@@ -1,23 +1,23 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-function PaymentCallbackContent() {
-  const searchParams = useSearchParams();
+export default function PaymentCallbackPage() {
   const router = useRouter();
   const [status, setStatus] = useState<"verifying" | "success" | "failed">("verifying");
   const [message, setMessage] = useState("Verifying your payment...");
 
   useEffect(() => {
+    // Get URL parameters
+    const params = new URLSearchParams(window.location.search);
+    const orderTrackingId = params.get("OrderTrackingId");
+    const merchantReference = params.get("OrderMerchantReference");
+
     const verifyPayment = async () => {
       try {
-        // Get order tracking ID from URL
-        const orderTrackingId = searchParams.get("OrderTrackingId");
-        const merchantReference = searchParams.get("OrderMerchantReference");
-
         if (!orderTrackingId && !merchantReference) {
           setStatus("failed");
           setMessage("Invalid payment callback");
@@ -82,7 +82,7 @@ function PaymentCallbackContent() {
     };
 
     verifyPayment();
-  }, [searchParams, router]);
+  }, [router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
@@ -131,22 +131,5 @@ function PaymentCallbackContent() {
         )}
       </div>
     </div>
-  );
-}
-
-export default function PaymentCallbackPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8">
-          <div className="text-center">
-            <Loader2 className="h-16 w-16 animate-spin text-blue-500 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-slate-900 mb-2">Loading...</h1>
-          </div>
-        </div>
-      </div>
-    }>
-      <PaymentCallbackContent />
-    </Suspense>
   );
 }
