@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { getApiEndpoint } from "@/lib/api-url";
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -42,9 +43,6 @@ export default function PaymentModal({ isOpen, onClose, plan, onSuccess }: Payme
     setPaymentStatus("processing");
 
     try {
-      // TODO: Replace with actual payment gateway API call
-      // For now, simulating the payment process
-      
       // Format phone number to international format
       let formattedNumber = cleanedNumber;
       if (formattedNumber.startsWith("0")) {
@@ -53,8 +51,8 @@ export default function PaymentModal({ isOpen, onClose, plan, onSuccess }: Payme
         formattedNumber = "256" + formattedNumber;
       }
 
-      // Simulate API call to initiate payment
-      const response = await fetch("/api/payments/initiate", {
+      // Call to initiate payment
+      const response = await fetch(getApiEndpoint('/subscriptions/initiate-payment'), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -64,49 +62,90 @@ export default function PaymentModal({ isOpen, onClose, plan, onSuccess }: Payme
           phoneNumber: formattedNumber,
           amount: plan.price,
           planId: plan.id,
-          paymentMethod,
         }),
       });
 
-      if (!response.ok) {
-        throw new Error("Payment initiation failed");
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Payment initiation failed");
       }
 
-      const data = await response.json();
-      setTransactionId(data.transactionId || "TXN" + Date.now());
-      setPaymentStatus("pending_pin");
+      setTransactionId(data.txRef);
 
-      // Simulate checking payment status
-      setTimeout(() => {
-        checkPaymentStatus(data.transactionId || "TXN" + Date.now());
-      }, 3000);
+      // Redirect to Pesapal payment page if provided
+      if (data.redirectUrl) {
+        toast.success("Redirecting to payment page...");
+        window.location.href = data.redirectUrl;
+      } else {
+        // Fallback: poll for payment status
+        setPaymentStatus("pending_pin");
+        checkPaymentStatus(data.txRef, formattedNumber);
+      }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Payment error:", error);
       setPaymentStatus("failed");
-      toast.error("Failed to initiate payment. Please try again.");
+      toast.error(error.message || "Failed to initiate payment. Please try again.");
     }
   };
 
-  const checkPaymentStatus = async (txnId: string) => {
-    // TODO: Replace with actual payment status check API
-    // Simulating payment status check
-    setTimeout(() => {
-      // Randomly simulate success/failure for demo
-      const isSuccess = Math.random() > 0.3; // 70% success rate for demo
-      
-      if (isSuccess) {
-        setPaymentStatus("success");
-        toast.success("Payment successful! Your subscription has been renewed.");
-        setTimeout(() => {
-          onSuccess();
-          onClose();
-        }, 2000);
-      } else {
-        setPaymentStatus("failed");
-        toast.error("Payment was not completed. Please try again.");
+  const checkPaymentStatus = async (txnId: string, phone: string) => {
+    let attempts = 0;
+    const maxAttempts = 30; // Poll for 2 minutes
+
+    const poll = async () => {
+      try {
+        const response = await fetch(
+          getApiEndpoint('/subscriptions/verify-and-purchase'),
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+            body: JSON.stringify({
+              orderTrackingId: txnId,
+              planId: plan.id,
+              amount: plan.price,
+              phoneNumber: phone,
+            }),
+          }
+        );
+
+        const result = await response.json();
+
+        if (result.success) {
+          setPaymentStatus("success");
+          toast.success("Payment successful! Your subscription has been renewed.");
+          setTimeout(() => {
+            onSuccess();
+            onClose();
+          }, 2000);
+        } else if (result.status === 'failed') {
+          setPaymentStatus("failed");
+          toast.error("Payment was not completed. Please try again.");
+        } else {
+          attempts++;
+          if (attempts < maxAttempts) {
+            setTimeout(poll, 4000); // Poll every 4 seconds
+          } else {
+            setPaymentStatus("failed");
+            toast.error("Payment verification timeout.");
+          }
+        }
+      } catch (error) {
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 4000);
+        } else {
+          setPaymentStatus("failed");
+          toast.error("Verification failed. Please contact support.");
+        }
       }
-    }, 5000);
+    };
+
+    poll();
   };
 
   const handleRetry = () => {
