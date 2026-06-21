@@ -27,6 +27,17 @@ export default function PaymentModal({ isOpen, onClose, plan, onSuccess }: Payme
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("MTN");
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("idle");
   const [transactionId, setTransactionId] = useState("");
+  const [isChangingPlan, setIsChangingPlan] = useState(false);
+  
+  // Track the actively selected plan (defaults to the one passed in via props)
+  const [selectedPlan, setSelectedPlan] = useState(plan);
+
+  // Define available plans in case the user wants to switch
+  const availablePlans = [
+    { id: 'STARTER', name: 'Starter', price: 75000 },
+    { id: 'PROFESSIONAL', name: 'Professional', price: 150000 },
+    { id: 'PREMIUM', name: 'Premium', price: 300000 },
+  ];
 
   if (!isOpen) return null;
 
@@ -60,8 +71,8 @@ export default function PaymentModal({ isOpen, onClose, plan, onSuccess }: Payme
         },
         body: JSON.stringify({
           phoneNumber: formattedNumber,
-          amount: plan.price,
-          planId: plan.id,
+          amount: selectedPlan.price,
+          planId: selectedPlan.id,
         }),
       });
 
@@ -106,8 +117,8 @@ export default function PaymentModal({ isOpen, onClose, plan, onSuccess }: Payme
             },
             body: JSON.stringify({
               orderTrackingId: txnId,
-              planId: plan.id,
-              amount: plan.price,
+              planId: selectedPlan.id,
+              amount: selectedPlan.price,
               phoneNumber: phone,
             }),
           }
@@ -161,16 +172,71 @@ export default function PaymentModal({ isOpen, onClose, plan, onSuccess }: Payme
           <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CreditCard className="h-8 w-8 text-emerald-600" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">
-            Renew Subscription
-          </h2>
-          <p className="text-slate-600">
-            {plan.name} Plan - UGX {plan.price.toLocaleString()}/month
-          </p>
+          {isChangingPlan ? (
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">
+              Select a Plan
+            </h2>
+          ) : (
+            <>
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">
+                Renew Subscription
+              </h2>
+              <p className="text-slate-600">
+                {selectedPlan.name} Plan - UGX {selectedPlan.price.toLocaleString()}/month
+              </p>
+              <button 
+                onClick={() => setIsChangingPlan(true)}
+                className="text-emerald-600 text-sm font-semibold mt-2 hover:underline"
+              >
+                Change Plan
+              </button>
+            </>
+          )}
         </div>
 
+        {/* Change Plan View */}
+        {isChangingPlan && paymentStatus === "idle" && (
+          <div className="space-y-3">
+            {availablePlans.map((p) => (
+              <div 
+                key={p.id}
+                onClick={() => {
+                  setSelectedPlan(p);
+                  setIsChangingPlan(false);
+                }}
+                className={`p-4 border-2 rounded-xl cursor-pointer transition-all flex justify-between items-center ${
+                  selectedPlan.id === p.id 
+                    ? "border-emerald-500 bg-emerald-50" 
+                    : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                }`}
+              >
+                <div>
+                  <h3 className="font-bold text-slate-900">{p.name}</h3>
+                  <p className="text-sm text-slate-500">UGX {p.price.toLocaleString()} / month</p>
+                </div>
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                  selectedPlan.id === p.id ? "border-emerald-500" : "border-slate-300"
+                }`}>
+                  {selectedPlan.id === p.id && <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full" />}
+                </div>
+              </div>
+            ))}
+            
+            <div className="pt-4">
+              <Button
+                type="button"
+                onClick={() => setIsChangingPlan(false)}
+                variant="outline"
+                className="w-full"
+              >
+                Back to Payment
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Payment Form */}
-        {paymentStatus === "idle" && (
+        {!isChangingPlan && paymentStatus === "idle" && (
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Payment Method Selection */}
             <div>
@@ -241,7 +307,7 @@ export default function PaymentModal({ isOpen, onClose, plan, onSuccess }: Payme
                 type="submit"
                 className="flex-1 bg-emerald-500 hover:bg-emerald-600"
               >
-                Pay UGX {plan.price.toLocaleString()}
+                Pay UGX {selectedPlan.price.toLocaleString()}
               </Button>
             </div>
           </form>
