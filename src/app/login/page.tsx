@@ -2,13 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { Home, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuthStore } from '@/store/authStore';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -87,9 +87,13 @@ export default function LoginPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password" className="text-slate-700 text-sm">Password</Label>
-                <Link href="/forgot-password" className="text-xs sm:text-sm font-medium text-emerald-600 hover:text-emerald-500">
+                <button
+                  type="button"
+                  onClick={() => router.push('/forgot-password')}
+                  className="text-xs sm:text-sm font-medium text-emerald-600 hover:text-emerald-500"
+                >
                   Forgot password?
-                </Link>
+                </button>
               </div>
               <div className="relative">
                 <Input 
