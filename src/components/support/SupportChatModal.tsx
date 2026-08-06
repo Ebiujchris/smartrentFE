@@ -11,10 +11,15 @@ interface Message {
   id: string;
   content: string;
   senderId: string;
-  senderName: string;
-  senderRole: string;
+  senderName?: string;
+  senderRole?: string;
+  sender?: {
+    id: string;
+    fullName: string;
+    role: string;
+  };
   createdAt: string;
-  isOwn: boolean;
+  isOwn?: boolean;
 }
 
 interface SupportChatModalProps {
@@ -51,7 +56,14 @@ export default function SupportChatModal({ isOpen, onClose }: SupportChatModalPr
     try {
       setIsLoading(true);
       const response = await api.get('/support/messages');
-      setMessages(response.data);
+      // Map the response to include sender info and mark own messages
+      const mappedMessages = response.data.map((msg: any) => ({
+        ...msg,
+        senderName: msg.sender?.fullName || 'Support Team',
+        senderRole: msg.sender?.role || 'ADMIN',
+        isOwn: msg.senderId === user?.id,
+      }));
+      setMessages(mappedMessages);
     } catch (error: any) {
       console.error('Failed to fetch messages:', error);
     } finally {
@@ -153,16 +165,14 @@ export default function SupportChatModal({ isOpen, onClose }: SupportChatModalPr
                           : 'bg-white text-slate-900 border border-slate-200'
                       }`}
                     >
-                      {!message.isOwn && (
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-semibold">
-                            {message.senderName}
-                          </span>
-                          <span className="text-xs opacity-70 bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">
-                            {message.senderRole}
-                          </span>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-semibold">
+                          {message.senderName}
+                        </span>
+                        <span className="text-xs opacity-70 bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">
+                          {message.senderRole === 'ADMIN' ? 'Support Team' : message.senderRole}
+                        </span>
+                      </div>
                       <p className="text-sm whitespace-pre-wrap break-words">
                         {message.content}
                       </p>
