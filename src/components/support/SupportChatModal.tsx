@@ -63,7 +63,8 @@ export default function SupportChatModal({ isOpen, onClose }: SupportChatModalPr
         senderRole: msg.sender?.role || 'ADMIN',
         isOwn: msg.senderId === user?.id,
       }));
-      setMessages(mappedMessages);
+      // Reverse to show newest at bottom
+      setMessages(mappedMessages.reverse());
     } catch (error: any) {
       console.error('Failed to fetch messages:', error);
     } finally {
