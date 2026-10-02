@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { reportsService, MaintenanceReport as MaintenanceData } from '@/services/reports.service';
 import { FileSpreadsheet, FileText, Download, Loader2 } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { exportToExcel, exportToPDF, formatDate } from '@/lib/exportUtils';
 import { toast } from 'sonner';
 
@@ -25,7 +25,13 @@ export default function MaintenanceReport() {
   const [endDate, setEndDate] = useState('');
 
   useEffect(() => {
-    fetchData();
+    reportsService.getMaintenance()
+      .then(setData)
+      .catch((error) => {
+        console.error('Failed to fetch maintenance report:', error);
+        toast.error('Failed to load maintenance report');
+      })
+      .finally(() => setIsLoading(false));
   }, []);
 
   const fetchData = async () => {
@@ -51,7 +57,7 @@ export default function MaintenanceReport() {
       Tenant: r.tenant,
       Property: r.property,
       Unit: r.unit,
-      'Created': formatDate(r.createdAt),
+      'Reported': formatDate(r.reportedAt),
       'Resolved': r.resolvedAt ? formatDate(r.resolvedAt) : 'N/A',
     }));
     exportToExcel(excelData, 'Maintenance_Report', 'Requests');
@@ -67,7 +73,7 @@ export default function MaintenanceReport() {
       r.priority,
       r.property,
       r.unit,
-      formatDate(r.createdAt),
+      formatDate(r.reportedAt),
     ]);
     exportToPDF('Maintenance Report', headers, pdfData, 'Maintenance_Report');
     toast.success('PDF file downloaded');
@@ -86,11 +92,14 @@ export default function MaintenanceReport() {
   }
 
   const chartData = [
-    { name: 'Pending', value: data.summary.pending, color: STATUS_COLORS.PENDING },
-    { name: 'In Progress', value: data.summary.inProgress, color: STATUS_COLORS.IN_PROGRESS },
-    { name: 'Completed', value: data.summary.completed, color: STATUS_COLORS.COMPLETED },
-    { name: 'Cancelled', value: data.summary.cancelled, color: STATUS_COLORS.CANCELLED },
+    { name: 'Pending', value: data.byStatus.PENDING, color: STATUS_COLORS.PENDING },
+    { name: 'In Progress', value: data.byStatus.IN_PROGRESS, color: STATUS_COLORS.IN_PROGRESS },
+    { name: 'Completed', value: data.byStatus.COMPLETED, color: STATUS_COLORS.COMPLETED },
+    { name: 'Cancelled', value: data.byStatus.CANCELLED, color: STATUS_COLORS.CANCELLED },
   ].filter(item => item.value > 0);
+  const highPriorityOpenCount = data.requests.filter(request =>
+    ['PENDING', 'IN_PROGRESS'].includes(request.status) && ['HIGH', 'URGENT'].includes(request.priority),
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -101,7 +110,7 @@ export default function MaintenanceReport() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <Label htmlFor="startDate">Start Date</Label>
+              <Label htmlFor="startDate">Reported from</Label>
               <Input
                 id="startDate"
                 type="date"
@@ -110,7 +119,7 @@ export default function MaintenanceReport() {
               />
             </div>
             <div>
-              <Label htmlFor="endDate">End Date</Label>
+              <Label htmlFor="endDate">Reported through</Label>
               <Input
                 id="endDate"
                 type="date"
@@ -146,31 +155,31 @@ export default function MaintenanceReport() {
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-slate-600 mb-1">Total</p>
-            <p className="text-2xl font-bold">{data.summary.total}</p>
+            <p className="text-2xl font-bold">{data.total}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-slate-600 mb-1">Pending</p>
-            <p className="text-2xl font-bold text-orange-600">{data.summary.pending}</p>
+            <p className="text-2xl font-bold text-orange-600">{data.byStatus.PENDING}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-slate-600 mb-1">In Progress</p>
-            <p className="text-2xl font-bold text-blue-600">{data.summary.inProgress}</p>
+            <p className="text-2xl font-bold text-blue-600">{data.byStatus.IN_PROGRESS}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-slate-600 mb-1">Completed</p>
-            <p className="text-2xl font-bold text-green-600">{data.summary.completed}</p>
+            <p className="text-2xl font-bold text-green-600">{data.byStatus.COMPLETED}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-slate-600 mb-1">Avg Resolution</p>
-            <p className="text-2xl font-bold">{data.summary.avgResolutionDays}d</p>
+            <p className="text-sm text-slate-600 mb-1">Open high / urgent</p>
+            <p className="text-2xl font-bold">{highPriorityOpenCount}</p>
           </CardContent>
         </Card>
       </div>
@@ -252,7 +261,7 @@ export default function MaintenanceReport() {
                         {request.status.replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="p-3 text-sm">{formatDate(request.createdAt)}</td>
+                    <td className="p-3 text-sm">{formatDate(request.reportedAt)}</td>
                   </tr>
                 ))}
               </tbody>

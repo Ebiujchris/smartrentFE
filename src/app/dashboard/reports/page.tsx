@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart3, TrendingUp, Building2, Users, Wrench, Home } from 'lucide-react';
 import FinancialReport from '@/components/reports/FinancialReport';
 import PropertyReport from '@/components/reports/PropertyReport';
@@ -24,7 +23,7 @@ export default function ReportsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid grid-cols-6 w-full h-auto p-1 bg-slate-100">
+        <TabsList className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 w-full h-auto p-1 bg-slate-100">
           <TabsTrigger value="overview" className="flex flex-col items-center gap-1 py-3">
             <BarChart3 className="h-5 w-5" />
             <span className="text-xs">Overview</span>
@@ -52,7 +51,7 @@ export default function ReportsPage() {
         </TabsList>
 
         <TabsContent value="overview">
-          <OverviewReport />
+          <OverviewReport onNavigate={setActiveTab} />
         </TabsContent>
 
         <TabsContent value="financial">

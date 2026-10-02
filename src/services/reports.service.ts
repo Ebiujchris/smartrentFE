@@ -1,22 +1,20 @@
 import api from '@/lib/api';
 
 export interface FinancialReport {
-  totalCollected: number;
-  paidCount: number;
-  pendingCount: number;
-  lateCount: number;
+  totalPaid: number;
+  totalPending: number;
+  totalOverdue: number;
+  totalExpected: number;
   payments: Array<{
     id: string;
     amount: number;
     status: string;
-    paymentDate: string;
+    dueDate: string;
+    paidDate: string | null;
+    method: string | null;
     tenant: string;
     property: string;
     unit: string;
-  }>;
-  monthlyData: Array<{
-    month: string;
-    amount: number;
   }>;
 }
 
@@ -42,28 +40,34 @@ export interface PropertyReport {
 }
 
 export interface TenantReport {
-  tenants: Array<{
-    id: string;
-    name: string;
-    email: string;
-    phone: string;
-    property: string;
-    unit: string;
-    leaseStart: string;
-    leaseEnd: string;
-    totalPayments: number;
-    paidPayments: number;
-    latePayments: number;
-    totalPaid: number;
-  }>;
-  summary: {
-    totalTenants: number;
-    activeTenants: number;
-    inactiveTenants: number;
-  };
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  property: string;
+  unit: string;
+  rentAmount: number;
+  leaseStart: string;
+  leaseEnd: string;
+  totalPaid: number;
+  totalDue: number;
+  paymentStatus: string;
 }
 
 export interface MaintenanceReport {
+  total: number;
+  byStatus: {
+    PENDING: number;
+    IN_PROGRESS: number;
+    COMPLETED: number;
+    CANCELLED: number;
+  };
+  byPriority: {
+    LOW: number;
+    MEDIUM: number;
+    HIGH: number;
+    URGENT: number;
+  };
   requests: Array<{
     id: string;
     title: string;
@@ -73,54 +77,31 @@ export interface MaintenanceReport {
     tenant: string;
     property: string;
     unit: string;
-    createdAt: string;
+    reportedAt: string;
     resolvedAt: string | null;
   }>;
-  summary: {
-    total: number;
-    pending: number;
-    inProgress: number;
-    completed: number;
-    cancelled: number;
-    avgResolutionDays: number;
-  };
 }
 
 export interface VacancyReport {
-  listings: Array<{
-    id: string;
-    title: string;
-    property: string;
-    unit: string;
-    rent: number;
-    views: number;
-    postedDate: string;
-    status: string;
-  }>;
-  summary: {
-    totalListings: number;
-    activeListings: number;
-    inactiveListings: number;
-    totalViews: number;
-    avgViews: number;
-  };
+  id: string;
+  property: string;
+  unitNumber: string;
+  rentAmount: number;
+  bedrooms: number;
+  bathrooms: number;
+  hasListing: boolean;
+  listingViews: number;
+  listingActive: boolean;
 }
 
 export interface OverviewReport {
-  subscription: {
-    plan: string;
-    expiryDate: string;
-    daysRemaining: number;
-  };
-  stats: {
-    properties: number;
-    units: number;
-    tenants: number;
-    totalRevenue: number;
-    pendingPayments: number;
-    maintenanceRequests: number;
-    vacantListings: number;
-  };
+  totalProperties: number;
+  totalUnits: number;
+  totalTenants: number;
+  totalRevenue: number;
+  pendingMaintenance: number;
+  vacantUnits: number;
+  occupancyRate: number;
 }
 
 export const reportsService = {
@@ -142,7 +123,7 @@ export const reportsService = {
     return response.data;
   },
 
-  async getTenant(): Promise<TenantReport> {
+  async getTenant(): Promise<TenantReport[]> {
     const response = await api.get('/reports/tenant');
     return response.data;
   },
@@ -155,7 +136,7 @@ export const reportsService = {
     return response.data;
   },
 
-  async getVacancy(): Promise<VacancyReport> {
+  async getVacancy(): Promise<VacancyReport[]> {
     const response = await api.get('/reports/vacancy');
     return response.data;
   },

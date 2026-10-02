@@ -4,166 +4,104 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { reportsService, TenantReport as TenantData } from '@/services/reports.service';
-import { FileSpreadsheet, FileText, Download, Loader2 } from 'lucide-react';
+import { FileSpreadsheet, FileText, Download, Loader2, Users } from 'lucide-react';
 import { exportToExcel, exportToPDF, formatCurrency, formatDate } from '@/lib/exportUtils';
 import { toast } from 'sonner';
 
 export default function TenantReport() {
-  const [data, setData] = useState<TenantData | null>(null);
+  const [data, setData] = useState<TenantData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchData();
+    reportsService.getTenant()
+      .then(setData)
+      .catch((error) => {
+        console.error('Failed to fetch tenant report:', error);
+        toast.error('Failed to load tenant report');
+      })
+      .finally(() => setIsLoading(false));
   }, []);
 
-  const fetchData = async () => {
-    try {
-      const result = await reportsService.getTenant();
-      setData(result);
-    } catch (error) {
-      console.error('Failed to fetch tenant report:', error);
-      toast.error('Failed to load tenant report');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleExportExcel = () => {
-    if (!data) return;
-    const excelData = data.tenants.map(t => ({
-      Name: t.name,
-      Email: t.email,
-      Phone: t.phone,
-      Property: t.property,
-      Unit: t.unit,
-      'Lease Start': formatDate(t.leaseStart),
-      'Lease End': formatDate(t.leaseEnd),
-      'Total Payments': t.totalPayments,
-      'Paid': t.paidPayments,
-      'Late': t.latePayments,
-      'Total Paid': t.totalPaid,
+    const excelData = data.map((tenant) => ({
+      Name: tenant.name,
+      Email: tenant.email,
+      Phone: tenant.phone,
+      Property: tenant.property,
+      Unit: tenant.unit,
+      'Monthly Rent': tenant.rentAmount,
+      'Lease Start': formatDate(tenant.leaseStart),
+      'Lease End': formatDate(tenant.leaseEnd),
+      'Total Paid': tenant.totalPaid,
+      'Outstanding Rent': tenant.totalDue,
+      'Payment Status': tenant.paymentStatus,
     }));
     exportToExcel(excelData, 'Tenant_Report', 'Tenants');
     toast.success('Excel file downloaded');
   };
 
   const handleExportPDF = () => {
-    if (!data) return;
-    const headers = ['Name', 'Phone', 'Property', 'Unit', 'Paid Payments', 'Total Paid'];
-    const pdfData = data.tenants.map(t => [
-      t.name,
-      t.phone,
-      t.property,
-      t.unit,
-      t.paidPayments.toString(),
-      formatCurrency(t.totalPaid),
+    const headers = ['Tenant', 'Property / Unit', 'Monthly Rent', 'Outstanding', 'Status'];
+    const pdfData = data.map((tenant) => [
+      tenant.name,
+      `${tenant.property} / ${tenant.unit}`,
+      formatCurrency(tenant.rentAmount),
+      formatCurrency(tenant.totalDue),
+      tenant.paymentStatus,
     ]);
     exportToPDF('Tenant Report', headers, pdfData, 'Tenant_Report');
     toast.success('PDF file downloaded');
   };
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
-      </div>
-    );
+    return <div className="flex justify-center items-center py-20"><Loader2 className="h-8 w-8 animate-spin text-emerald-600" /></div>;
   }
 
-  if (!data) {
-    return <Card><CardContent className="py-10 text-center text-slate-500">No data available</CardContent></Card>;
-  }
+  const upToDate = data.filter((tenant) => tenant.totalDue <= 0).length;
+  const tenantsWithDues = data.length - upToDate;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-3">
-        <Button onClick={handleExportExcel} variant="outline" className="gap-2">
-          <FileSpreadsheet className="h-4 w-4" />
-          Export Excel
+        <Button onClick={handleExportExcel} variant="outline" className="gap-2" disabled={!data.length}>
+          <FileSpreadsheet className="h-4 w-4" /> Export Excel
         </Button>
-        <Button onClick={handleExportPDF} variant="outline" className="gap-2">
-          <FileText className="h-4 w-4" />
-          Export PDF
+        <Button onClick={handleExportPDF} variant="outline" className="gap-2" disabled={!data.length}>
+          <FileText className="h-4 w-4" /> Export PDF
         </Button>
         <Button onClick={() => window.print()} variant="outline" className="gap-2">
-          <Download className="h-4 w-4" />
-          Print
+          <Download className="h-4 w-4" /> Print
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-slate-600 mb-1">Total Tenants</p>
-            <p className="text-2xl font-bold">{data.summary.totalTenants}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-slate-600 mb-1">Active Tenants</p>
-            <p className="text-2xl font-bold text-green-600">{data.summary.activeTenants}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-slate-600 mb-1">Inactive Tenants</p>
-            <p className="text-2xl font-bold text-slate-400">{data.summary.inactiveTenants}</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card><CardContent className="pt-6"><p className="text-sm text-slate-600 mb-1">Active tenants</p><p className="text-2xl font-bold">{data.length}</p></CardContent></Card>
+        <Card><CardContent className="pt-6"><p className="text-sm text-slate-600 mb-1">Up to date</p><p className="text-2xl font-bold text-emerald-700">{upToDate}</p></CardContent></Card>
+        <Card><CardContent className="pt-6"><p className="text-sm text-slate-600 mb-1">With outstanding rent</p><p className="text-2xl font-bold text-amber-700">{tenantsWithDues}</p></CardContent></Card>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Tenant Details</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" />Tenant ledger</CardTitle></CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-3 text-sm font-semibold">Tenant</th>
-                  <th className="text-left p-3 text-sm font-semibold">Property / Unit</th>
-                  <th className="text-center p-3 text-sm font-semibold">Lease Period</th>
-                  <th className="text-center p-3 text-sm font-semibold">Payments</th>
-                  <th className="text-right p-3 text-sm font-semibold">Total Paid</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.tenants.map((tenant) => (
-                  <tr key={tenant.id} className="border-b hover:bg-slate-50">
-                    <td className="p-3">
-                      <div>
-                        <p className="font-medium">{tenant.name}</p>
-                        <p className="text-sm text-slate-500">{tenant.phone}</p>
-                      </div>
-                    </td>
-                    <td className="p-3">
-                      <div>
-                        <p className="font-medium">{tenant.property}</p>
-                        <p className="text-sm text-slate-500">Unit {tenant.unit}</p>
-                      </div>
-                    </td>
-                    <td className="p-3 text-center text-sm">
-                      <div>
-                        <p>{formatDate(tenant.leaseStart)}</p>
-                        <p className="text-slate-500">to</p>
-                        <p>{formatDate(tenant.leaseEnd)}</p>
-                      </div>
-                    </td>
-                    <td className="p-3 text-center">
-                      <div className="text-sm">
-                        <p><span className="text-green-600 font-semibold">{tenant.paidPayments}</span> paid</p>
-                        {tenant.latePayments > 0 && (
-                          <p><span className="text-red-600 font-semibold">{tenant.latePayments}</span> late</p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-3 text-right font-medium">{formatCurrency(tenant.totalPaid)}</td>
+          {data.length === 0 ? <p className="py-8 text-center text-slate-500">No active tenants to report.</p> : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px]">
+                <thead><tr className="border-b text-left text-sm text-slate-600">
+                  <th className="p-3 font-semibold">Tenant</th><th className="p-3 font-semibold">Property / Unit</th><th className="p-3 text-right font-semibold">Monthly rent</th><th className="p-3 text-right font-semibold">Total paid</th><th className="p-3 text-right font-semibold">Outstanding</th><th className="p-3 text-center font-semibold">Lease ends</th>
+                </tr></thead>
+                <tbody>{data.map((tenant) => (
+                  <tr key={tenant.id} className="border-b last:border-0 hover:bg-slate-50">
+                    <td className="p-3"><p className="font-medium text-slate-900">{tenant.name}</p><p className="text-sm text-slate-500">{tenant.email}</p></td>
+                    <td className="p-3"><p>{tenant.property}</p><p className="text-sm text-slate-500">Unit {tenant.unit}</p></td>
+                    <td className="p-3 text-right">{formatCurrency(tenant.rentAmount)}</td>
+                    <td className="p-3 text-right">{formatCurrency(tenant.totalPaid)}</td>
+                    <td className={`p-3 text-right font-medium ${tenant.totalDue > 0 ? 'text-amber-700' : 'text-slate-500'}`}>{formatCurrency(tenant.totalDue)}</td>
+                    <td className="p-3 text-center text-sm">{formatDate(tenant.leaseEnd)}</td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                ))}</tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 const STATUS_COLORS = {
   PAID: '#10B981',
   PENDING: '#F59E0B',
-  LATE: '#EF4444',
+  OVERDUE: '#EF4444',
 };
 
 export default function FinancialReport() {
@@ -24,7 +24,13 @@ export default function FinancialReport() {
   const [endDate, setEndDate] = useState('');
 
   useEffect(() => {
-    fetchData();
+    reportsService.getFinancial()
+      .then(setData)
+      .catch((error) => {
+        console.error('Failed to fetch financial report:', error);
+        toast.error('Failed to load financial report');
+      })
+      .finally(() => setIsLoading(false));
   }, []);
 
   const fetchData = async () => {
@@ -44,7 +50,8 @@ export default function FinancialReport() {
     if (!data) return;
     
     const excelData = data.payments.map(p => ({
-      Date: formatDate(p.paymentDate),
+      'Due Date': formatDate(p.dueDate),
+      'Paid Date': p.paidDate ? formatDate(p.paidDate) : '',
       Tenant: p.tenant,
       Property: p.property,
       Unit: p.unit,
@@ -59,9 +66,10 @@ export default function FinancialReport() {
   const handleExportPDF = () => {
     if (!data) return;
     
-    const headers = ['Date', 'Tenant', 'Property', 'Unit', 'Amount', 'Status'];
+    const headers = ['Due Date', 'Paid Date', 'Tenant', 'Property', 'Unit', 'Amount', 'Status'];
     const pdfData = data.payments.map(p => [
-      formatDate(p.paymentDate),
+      formatDate(p.dueDate),
+      p.paidDate ? formatDate(p.paidDate) : '-',
       p.tenant,
       p.property,
       p.unit,
@@ -96,10 +104,27 @@ export default function FinancialReport() {
   }
 
   const statusData = [
-    { name: 'Paid', value: data.paidCount, color: STATUS_COLORS.PAID },
-    { name: 'Pending', value: data.pendingCount, color: STATUS_COLORS.PENDING },
-    { name: 'Late', value: data.lateCount, color: STATUS_COLORS.LATE },
+    { name: 'Paid', value: data.payments.filter(payment => payment.status === 'PAID').length, color: STATUS_COLORS.PAID },
+    { name: 'Pending', value: data.payments.filter(payment => payment.status === 'PENDING').length, color: STATUS_COLORS.PENDING },
+    { name: 'Overdue', value: data.payments.filter(payment => payment.status === 'OVERDUE').length, color: STATUS_COLORS.OVERDUE },
   ];
+  const monthlyData = Array.from({ length: 6 }, (_, index) => {
+    const monthDate = new Date();
+    monthDate.setDate(1);
+    monthDate.setMonth(monthDate.getMonth() - (5 - index));
+    const key = `${monthDate.getFullYear()}-${monthDate.getMonth()}`;
+    const payments = data.payments.filter(payment => {
+      const dueDate = new Date(payment.dueDate);
+      return `${dueDate.getFullYear()}-${dueDate.getMonth()}` === key;
+    });
+
+    return {
+      month: monthDate.toLocaleDateString('en', { month: 'short' }),
+      PAID: payments.filter(payment => payment.status === 'PAID').reduce((total, payment) => total + payment.amount, 0),
+      PENDING: payments.filter(payment => payment.status === 'PENDING').reduce((total, payment) => total + payment.amount, 0),
+      OVERDUE: payments.filter(payment => payment.status === 'OVERDUE').reduce((total, payment) => total + payment.amount, 0),
+    };
+  });
 
   return (
     <div className="space-y-6">
@@ -111,7 +136,7 @@ export default function FinancialReport() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <Label htmlFor="startDate">Start Date</Label>
+              <Label htmlFor="startDate">Due from</Label>
               <Input
                 id="startDate"
                 type="date"
@@ -120,7 +145,7 @@ export default function FinancialReport() {
               />
             </div>
             <div>
-              <Label htmlFor="endDate">End Date</Label>
+              <Label htmlFor="endDate">Due through</Label>
               <Input
                 id="endDate"
                 type="date"
@@ -161,7 +186,7 @@ export default function FinancialReport() {
               <div>
                 <p className="text-sm text-slate-600 mb-1">Total Collected</p>
                 <p className="text-xl font-bold text-slate-900">
-                  {formatCurrency(data.totalCollected)}
+                  {formatCurrency(data.totalPaid)}
                 </p>
               </div>
               <div className="bg-green-100 p-3 rounded-lg">
@@ -175,8 +200,8 @@ export default function FinancialReport() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-600 mb-1">Paid</p>
-                <p className="text-xl font-bold text-green-600">{data.paidCount}</p>
+                <p className="text-sm text-slate-600 mb-1">Pending</p>
+                <p className="text-xl font-bold text-orange-600">{formatCurrency(data.totalPending)}</p>
               </div>
               <div className="bg-green-100 p-3 rounded-lg">
                 <CheckCircle className="h-5 w-5 text-green-600" />
@@ -189,8 +214,8 @@ export default function FinancialReport() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-600 mb-1">Pending</p>
-                <p className="text-xl font-bold text-orange-600">{data.pendingCount}</p>
+                <p className="text-sm text-slate-600 mb-1">Overdue</p>
+                <p className="text-xl font-bold text-red-600">{formatCurrency(data.totalOverdue)}</p>
               </div>
               <div className="bg-orange-100 p-3 rounded-lg">
                 <Clock className="h-5 w-5 text-orange-600" />
@@ -203,8 +228,8 @@ export default function FinancialReport() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-600 mb-1">Late</p>
-                <p className="text-xl font-bold text-red-600">{data.lateCount}</p>
+                <p className="text-sm text-slate-600 mb-1">Recorded rent due</p>
+                <p className="text-xl font-bold text-slate-900">{formatCurrency(data.totalExpected)}</p>
               </div>
               <div className="bg-red-100 p-3 rounded-lg">
                 <AlertTriangle className="h-5 w-5 text-red-600" />
@@ -218,17 +243,19 @@ export default function FinancialReport() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Monthly Revenue</CardTitle>
+            <CardTitle>Rent due by month</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={data.monthlyData}>
+              <BarChart data={monthlyData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
-                <Tooltip formatter={(value: any) => formatCurrency(value)} />
+                <Tooltip formatter={(value) => formatCurrency(Number(value ?? 0))} />
                 <Legend />
-                <Bar dataKey="amount" fill="#10B981" name="Revenue" />
+                <Bar dataKey="PAID" stackId="rent" fill={STATUS_COLORS.PAID} name="Paid" />
+                <Bar dataKey="PENDING" stackId="rent" fill={STATUS_COLORS.PENDING} name="Pending" />
+                <Bar dataKey="OVERDUE" stackId="rent" fill={STATUS_COLORS.OVERDUE} name="Overdue" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -272,7 +299,7 @@ export default function FinancialReport() {
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-3 text-sm font-semibold text-slate-700">Date</th>
+                  <th className="text-left p-3 text-sm font-semibold text-slate-700">Due date</th>
                   <th className="text-left p-3 text-sm font-semibold text-slate-700">Tenant</th>
                   <th className="text-left p-3 text-sm font-semibold text-slate-700">Property</th>
                   <th className="text-left p-3 text-sm font-semibold text-slate-700">Unit</th>
@@ -283,7 +310,7 @@ export default function FinancialReport() {
               <tbody>
                 {data.payments.map((payment) => (
                   <tr key={payment.id} className="border-b hover:bg-slate-50">
-                    <td className="p-3 text-sm">{formatDate(payment.paymentDate)}</td>
+                    <td className="p-3 text-sm">{formatDate(payment.dueDate)}</td>
                     <td className="p-3 text-sm">{payment.tenant}</td>
                     <td className="p-3 text-sm">{payment.property}</td>
                     <td className="p-3 text-sm">{payment.unit}</td>
