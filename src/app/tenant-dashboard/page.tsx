@@ -1,13 +1,44 @@
 "use client";
 
-import { useEffect } from "react";
-import { Home, Calendar, CreditCard, AlertCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Home, CreditCard, AlertCircle } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
+import { usePaymentStore } from "@/store/paymentStore";
+import { tenantService, type Tenant } from "@/services/tenant.service";
+import { getLeaseStatus, getPaymentStatus } from "@/lib/rentStatus";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 export default function TenantOverviewPage() {
   const { user } = useAuthStore();
+  const { payments, fetchPayments } = usePaymentStore();
+  const [tenant, setTenant] = useState<Tenant | null>(null);
+  const [tenantLoading, setTenantLoading] = useState(true);
+
+  useEffect(() => {
+    tenantService
+      .getCurrentTenant()
+      .then(setTenant)
+      .catch((error) => console.error("Failed to load tenant overview:", error))
+      .finally(() => setTenantLoading(false));
+    fetchPayments();
+  }, [fetchPayments]);
+
+  const currentLease = tenant?.leases?.find(
+    (lease) => getLeaseStatus(lease) === "ACTIVE",
+  );
+  const leaseForDisplay = currentLease ?? tenant?.leases?.[0];
+  const leaseStatus = getLeaseStatus(leaseForDisplay);
+  const nextPayment = payments
+    .filter(
+      (payment) =>
+        payment.tenant?.id === tenant?.id &&
+        !["PAID", "CANCELLED"].includes(payment.status),
+    )
+    .sort(
+      (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
+    )[0];
+  const paymentStatus = nextPayment ? getPaymentStatus(nextPayment) : null;
 
   return (
     <div className="space-y-4 sm:space-y-5 lg:space-y-6">
@@ -32,7 +63,15 @@ export default function TenantOverviewPage() {
                 Your Unit
               </p>
               <p className="text-base sm:text-lg lg:text-xl font-bold text-slate-900 truncate">
-                Active Lease
+                {tenantLoading
+                  ? "Loading..."
+                  : leaseForDisplay?.unit.unitNumber ??
+                    (leaseStatus === "UPCOMING" ? "Upcoming Lease" : "No Lease")}
+              </p>
+              <p className="text-xs text-slate-500 truncate">
+                {leaseForDisplay
+                  ? `${leaseForDisplay.unit.property.name} · ${leaseStatus.toLowerCase()}`
+                  : ""}
               </p>
             </div>
           </div>
@@ -48,8 +87,15 @@ export default function TenantOverviewPage() {
                 Next Payment
               </p>
               <p className="text-base sm:text-lg lg:text-xl font-bold text-slate-900 truncate">
-                Pending
+                {nextPayment
+                  ? `UGX ${Number(nextPayment.amount).toLocaleString()}`
+                  : "No rent invoice"}
               </p>
+              {nextPayment && (
+                <p className={`text-xs mt-1 ${paymentStatus === "OVERDUE" ? "text-red-600" : "text-slate-500"}`}>
+                  {paymentStatus} · Due {new Date(nextPayment.dueDate).toLocaleDateString()}
+                </p>
+              )}
             </div>
           </div>
           <Link href="/tenant-dashboard/payments">

@@ -16,11 +16,9 @@ import {
   Table2,
   Pencil,
   Trash2,
-  CreditCard,
   CheckCircle,
   Clock,
   AlertCircle,
-  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTenantStore } from "@/store/tenantStore";
@@ -35,6 +33,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getLeaseStatus, getPaymentStatus, type LeaseStatus } from "@/lib/rentStatus";
 import {
   Select,
   SelectContent,
@@ -43,21 +42,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import type { Tenant } from "@/services/tenant.service";
-import { paymentService } from "@/services/payment.service";
+import type { Tenant, TenantLeaseInfo } from "@/services/tenant.service";
 import PaymentReceipt from "@/components/receipts/PaymentReceipt";
 
-interface TenantLeaseInfo {
+interface TenantPayment {
   id: string;
-  unit: {
-    id: string;
-    unitNumber: string;
-    property: {
-      id: string;
-      name: string;
-      address: string;
-    };
-  };
+  tenant?: { id: string };
+  status: string;
+  dueDate: string;
+  amount: number;
 }
 
 interface TenantItem extends Tenant {
@@ -66,6 +59,26 @@ interface TenantItem extends Tenant {
 
 type SortOption = "name" | "unit" | "property";
 type ViewMode = "cards" | "table";
+
+const getDisplayedLease = (tenant: TenantItem) =>
+  tenant.leases?.find((lease) => getLeaseStatus(lease) === "ACTIVE") ??
+  tenant.leases?.[0];
+
+const leaseStatusClasses: Record<LeaseStatus, string> = {
+  ACTIVE: "bg-emerald-100 text-emerald-700 border border-emerald-200",
+  UPCOMING: "bg-blue-100 text-blue-700 border border-blue-200",
+  EXPIRED: "bg-amber-100 text-amber-800 border border-amber-200",
+  ENDED: "bg-slate-100 text-slate-600 border border-slate-200",
+  UNASSIGNED: "bg-slate-100 text-slate-600 border border-slate-200",
+};
+
+const leaseStatusLabels: Record<LeaseStatus, string> = {
+  ACTIVE: "Active Lease",
+  UPCOMING: "Upcoming Lease",
+  EXPIRED: "Lease Expired",
+  ENDED: "Lease Ended",
+  UNASSIGNED: "Unassigned",
+};
 
 const emptyCreateForm = {
   email: "",
@@ -151,7 +164,7 @@ export default function TenantsPage() {
 
     return [...typedTenants]
       .filter((tenant) => {
-        const primaryLease = tenant.leases?.[0];
+        const primaryLease = getDisplayedLease(tenant);
         const propertyName = primaryLease?.unit.property.name ?? "";
         const unitNumber = primaryLease?.unit.unitNumber ?? "";
 
@@ -171,8 +184,8 @@ export default function TenantsPage() {
         return matchesProperty && matchesSearch;
       })
       .sort((a, b) => {
-        const leaseA = a.leases?.[0];
-        const leaseB = b.leases?.[0];
+        const leaseA = getDisplayedLease(a);
+        const leaseB = getDisplayedLease(b);
 
         const unitA = leaseA?.unit.unitNumber ?? "ZZZ";
         const unitB = leaseB?.unit.unitNumber ?? "ZZZ";
@@ -283,22 +296,25 @@ export default function TenantsPage() {
 
   // Get the next unpaid payment for a tenant
   const getNextUnpaidPayment = (tenantId: string) => {
-    const tenantPayments = payments.filter(
-      (payment: any) =>
-        payment.tenant?.id === tenantId && payment.status !== "PAID",
+    const tenantPayments = (payments as TenantPayment[]).filter(
+      (payment) =>
+        payment.tenant?.id === tenantId &&
+        !["PAID", "CANCELLED"].includes(payment.status),
     );
 
     if (tenantPayments.length === 0) return null;
 
     // Sort by due date and get the earliest
-    return tenantPayments.sort(
-      (a: any, b: any) =>
+    const nextPayment = tenantPayments.sort(
+      (a, b) =>
         new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
     )[0];
+
+    return { ...nextPayment, status: getPaymentStatus(nextPayment) };
   };
 
   // Handle marking existing payment as paid
-  const handleMarkAsPaid = (payment: any) => {
+  const handleMarkAsPaid = (payment: TenantPayment) => {
     setSelectedPayment(payment);
     setIsCreatingNew(false);
     setIsMarkPaidOpen(true);
@@ -835,10 +851,10 @@ export default function TenantsPage() {
                   </thead>
                   <tbody>
                     {filteredTenants.map((tenant) => {
-                      const activeLease = tenant.leases?.[0];
-                      const propertyName =
-                        activeLease?.unit.property.name ?? "—";
-                      const unitNumber = activeLease?.unit.unitNumber ?? "—";
+                      const displayedLease = getDisplayedLease(tenant);
+                      const leaseStatus = getLeaseStatus(displayedLease);
+                      const propertyName = displayedLease?.unit.property.name ?? "—";
+                      const unitNumber = displayedLease?.unit.unitNumber ?? "—";
                       const nextPayment = getNextUnpaidPayment(tenant.id);
 
                       return (
@@ -870,9 +886,9 @@ export default function TenantsPage() {
                           </td>
                           <td className="px-3 md:px-6 py-3 md:py-4">
                             <span
-                              className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${activeLease ? "bg-emerald-100 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-600 border border-slate-200"}`}
+                              className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${leaseStatusClasses[leaseStatus]}`}
                             >
-                              {activeLease ? "Active Lease" : "Unassigned"}
+                              {leaseStatusLabels[leaseStatus]}
                             </span>
                           </td>
                           <td className="px-3 md:px-6 py-3 md:py-4">
@@ -899,9 +915,7 @@ export default function TenantsPage() {
                           </td>
                           <td className="px-3 md:px-6 py-3 md:py-4">
                             <div className="flex flex-col md:flex-row items-start md:items-center gap-1 md:gap-2">
-                              {activeLease &&
-                                (nextPayment &&
-                                nextPayment.status !== "PAID" ? (
+                              {nextPayment ? (
                                   <Button
                                     type="button"
                                     size="sm"
@@ -913,7 +927,7 @@ export default function TenantsPage() {
                                     <CheckCircle className="h-3 w-3 md:h-4 md:w-4 mr-1" />
                                     Mark Paid
                                   </Button>
-                                ) : (
+                              ) : leaseStatus === "ACTIVE" ? (
                                   <Button
                                     type="button"
                                     size="sm"
@@ -925,7 +939,7 @@ export default function TenantsPage() {
                                     <Plus className="h-3 w-3 md:h-4 md:w-4 mr-1" />
                                     Record Payment
                                   </Button>
-                                ))}
+                              ) : null}
                               <Button
                                 type="button"
                                 size="sm"
@@ -958,10 +972,11 @@ export default function TenantsPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {filteredTenants.map((tenant) => {
-                const activeLease = tenant.leases?.[0];
-                const unitNumber = activeLease?.unit.unitNumber;
-                const propertyName = activeLease?.unit.property.name;
-                const propertyAddress = activeLease?.unit.property.address;
+                const displayedLease = getDisplayedLease(tenant);
+                const leaseStatus = getLeaseStatus(displayedLease);
+                const unitNumber = displayedLease?.unit.unitNumber;
+                const propertyName = displayedLease?.unit.property.name;
+                const propertyAddress = displayedLease?.unit.property.address;
                 const nextPayment = getNextUnpaidPayment(tenant.id);
 
                 return (
@@ -973,8 +988,8 @@ export default function TenantsPage() {
                       <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
                         <Users className="h-6 w-6 text-purple-600" />
                       </div>
-                      <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full border border-emerald-200">
-                        {activeLease ? "Active Lease" : "Unassigned"}
+                      <span className={`px-3 py-1 text-xs font-medium rounded-full ${leaseStatusClasses[leaseStatus]}`}>
+                        {leaseStatusLabels[leaseStatus]}
                       </span>
                     </div>
 
@@ -982,7 +997,7 @@ export default function TenantsPage() {
                       {tenant.user.fullName}
                     </h3>
 
-                    {activeLease ? (
+                    {displayedLease ? (
                       <div className="space-y-3 mb-4">
                         <div className="flex items-center justify-between gap-3">
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full border border-blue-100">
@@ -1041,8 +1056,7 @@ export default function TenantsPage() {
                     )}
 
                     <div className="mt-4 flex flex-col gap-2">
-                      {activeLease &&
-                        (nextPayment && nextPayment.status !== "PAID" ? (
+                      {nextPayment ? (
                           <Button
                             type="button"
                             className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
@@ -1051,7 +1065,7 @@ export default function TenantsPage() {
                             <CheckCircle className="h-4 w-4 mr-2" />
                             Mark Payment as Paid
                           </Button>
-                        ) : (
+                      ) : leaseStatus === "ACTIVE" ? (
                           <Button
                             type="button"
                             className="w-full bg-blue-500 hover:bg-blue-600 text-white"
@@ -1060,7 +1074,7 @@ export default function TenantsPage() {
                             <Plus className="h-4 w-4 mr-2" />
                             Record Payment
                           </Button>
-                        ))}
+                      ) : null}
                       <div className="flex gap-2">
                         <Button
                           type="button"

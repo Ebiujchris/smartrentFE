@@ -1,54 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   CreditCard,
   CheckCircle,
   Clock,
   AlertCircle,
   Loader2,
-  DollarSign,
 } from "lucide-react";
 import { usePaymentStore } from "@/store/paymentStore";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 import { formatPaymentDate, isValidDate, formatDate } from "@/lib/dateUtils";
+import { getPaymentStatus } from "@/lib/rentStatus";
 
 export default function TenantPaymentsPage() {
-  const { payments, loading, fetchPayments, recordPayment } = usePaymentStore();
-  const [isPaying, setIsPaying] = useState<string | null>(null);
+  const { payments, loading, fetchPayments } = usePaymentStore();
 
   useEffect(() => {
     fetchPayments();
   }, [fetchPayments]);
-
-  const handlePayNow = async (paymentId: string, amount: string | number) => {
-    setIsPaying(paymentId);
-    try {
-      // Simulating a successful payment integration (e.g. Mobile Money prompt)
-      // In a real app, this would redirect to a payment gateway or trigger a push USSD
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // We use the same backend endpoint to mark it as paid, or an equivalent tenant endpoint.
-      await recordPayment(
-        paymentId,
-        "MTN_MOBILE_MONEY",
-        `SIMULATED_TXN_${Math.floor(Math.random() * 100000)}`,
-        "SOURCE:TENANT_PORTAL",
-      );
-      toast.success("Payment successful!", {
-        description: `Your payment of UGX ${Number(amount).toLocaleString()} has been processed.`,
-      });
-      fetchPayments();
-    } catch (error) {
-      toast.error("Payment failed", {
-        description:
-          "There was an error processing your payment. Please try again.",
-      });
-    } finally {
-      setIsPaying(null);
-    }
-  };
 
   const getStatusBadge = (status: string) => {
     const styles = {
@@ -129,7 +98,10 @@ export default function TenantPaymentsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
-                {payments.map((payment: any) => (
+                {payments.map((payment) => {
+                  const status = getPaymentStatus(payment);
+
+                  return (
                   <tr key={payment.id} className="hover:bg-slate-50">
                      <td className="px-3 sm:px-4 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs sm:text-sm text-slate-900 font-medium">
                        {payment.dueDate ? formatDate(payment.dueDate) : '-'}
@@ -141,29 +113,17 @@ export default function TenantPaymentsPage() {
                     </td>
                     <td className="px-3 sm:px-4 md:px-6 py-3 md:py-4 whitespace-nowrap">
                       <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(payment.status)}`}
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(status)}`}
                       >
-                        {getStatusIcon(payment.status)}
-                        {payment.status}
+                        {getStatusIcon(status)}
+                        {status}
                       </span>
                     </td>
                     <td className="px-3 sm:px-4 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs sm:text-sm">
-                      {payment.status !== "PAID" ? (
-                        <Button
-                          onClick={() =>
-                            handlePayNow(payment.id, payment.amount)
-                          }
-                          disabled={isPaying === payment.id}
-                          size="sm"
-                          className="bg-emerald-500 hover:bg-emerald-600 gap-1 sm:gap-2 text-xs sm:text-sm"
-                        >
-                          {isPaying === payment.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <DollarSign className="h-4 w-4" />
-                          )}
-                          Pay Now
-                        </Button>
+                      {status === "PENDING" || status === "OVERDUE" ? (
+                        <span className="text-slate-500 text-xs">
+                          Pay your landlord directly; they will record the payment.
+                        </span>
                       ) : (
                         <span className="text-slate-500 text-xs">
                           {isValidDate(payment.paidDate)
@@ -173,7 +133,8 @@ export default function TenantPaymentsPage() {
                       )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

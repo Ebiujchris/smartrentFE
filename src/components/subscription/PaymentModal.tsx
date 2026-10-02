@@ -84,6 +84,13 @@ export default function PaymentModal({ isOpen, onClose, plan, onSuccess }: Payme
 
       setTransactionId(data.txRef);
 
+      localStorage.setItem("pending_subscription_payment", JSON.stringify({
+        planId: selectedPlan.id,
+        amount: selectedPlan.price,
+        phoneNumber: formattedNumber,
+        txRef: data.txRef,
+      }));
+
       // Redirect to Pesapal payment page if provided
       if (data.redirectUrl) {
         toast.success("Redirecting to payment page...");

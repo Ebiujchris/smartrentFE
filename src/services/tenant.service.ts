@@ -2,6 +2,9 @@ import api from "@/lib/api";
 
 export interface TenantLeaseInfo {
   id: string;
+  isActive: boolean;
+  startDate: string;
+  endDate: string;
   unit: {
     id: string;
     unitNumber: string;
