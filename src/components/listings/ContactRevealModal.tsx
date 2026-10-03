@@ -22,6 +22,7 @@ export default function ContactRevealModal({ isOpen, onClose, listingId, onSucce
   const [buyerEmail, setBuyerEmail] = useState("");
   const [buyerName, setBuyerName] = useState("");
   const [status, setStatus] = useState<PaymentStatus>("form");
+  const [failureMessage, setFailureMessage] = useState("");
 
   if (!isOpen) return null;
 
@@ -53,7 +54,7 @@ export default function ContactRevealModal({ isOpen, onClose, listingId, onSucce
         body: JSON.stringify({
           listingId,
           buyerPhone: formattedNumber,
-          buyerEmail: buyerEmail || `buyer${Date.now()}@smartrentug.com`,
+          buyerEmail: buyerEmail || undefined,
           buyerName: buyerName || "Buyer",
         }),
       });
@@ -61,8 +62,9 @@ export default function ContactRevealModal({ isOpen, onClose, listingId, onSucce
       const result = await response.json();
 
       if (!result.success) {
+        setFailureMessage(result.message || "Payment initiation failed. Please try again.");
         setStatus("failed");
-        toast.error(result.message || "Payment initiation failed");
+        toast.error(result.message || "Payment initiation failed.");
         return;
       }
 
@@ -73,13 +75,12 @@ export default function ContactRevealModal({ isOpen, onClose, listingId, onSucce
         buyerEmail,
         buyerName,
         txRef: result.txRef,
-        timestamp: Date.now(),
       }));
 
       // Redirect to Pesapal payment page
       if (result.redirectUrl) {
         toast.success("Redirecting to payment page...");
-        window.location.href = result.redirectUrl;
+        window.location.assign(result.redirectUrl);
       } else {
         // Fallback: poll for payment status
         setStatus("pending_pin");
@@ -88,8 +89,9 @@ export default function ContactRevealModal({ isOpen, onClose, listingId, onSucce
 
     } catch (error) {
       console.error("Payment error:", error);
+      setFailureMessage(error instanceof Error ? error.message : "Unable to reach the payment service.");
       setStatus("failed");
-      toast.error("Payment failed. Please try again.");
+      toast.error("Could not start the payment. Check your connection and try again.");
     }
   };
 
@@ -128,6 +130,7 @@ export default function ContactRevealModal({ isOpen, onClose, listingId, onSucce
             onClose();
           }, 1500);
         } else if (result.status === 'failed') {
+          setFailureMessage(result.message || "Pesapal reported that this payment failed.");
           setStatus("failed");
           toast.error("Payment failed. Please try again.");
         } else {
@@ -135,15 +138,17 @@ export default function ContactRevealModal({ isOpen, onClose, listingId, onSucce
           if (attempts < maxAttempts) {
             setTimeout(poll, 4000); // Poll every 4 seconds
           } else {
+            setFailureMessage("We could not confirm the payment. If you were charged, contact support before trying again.");
             setStatus("failed");
             toast.error("Payment verification timeout. Please contact support if amount was deducted.");
           }
         }
-      } catch (error) {
+      } catch {
         attempts++;
         if (attempts < maxAttempts) {
           setTimeout(poll, 4000);
         } else {
+          setFailureMessage("We could not confirm the payment. If you were charged, contact support before trying again.");
           setStatus("failed");
           toast.error("Verification failed. Please contact support.");
         }
@@ -154,6 +159,7 @@ export default function ContactRevealModal({ isOpen, onClose, listingId, onSucce
   };
 
   const handleRetry = () => {
+    setFailureMessage("");
     setStatus("form");
   };
 
@@ -273,7 +279,7 @@ export default function ContactRevealModal({ isOpen, onClose, listingId, onSucce
             </div>
             <p className="text-lg font-semibold text-slate-900 mb-2">Payment Failed</p>
             <p className="text-sm text-slate-600 mb-6">
-              The payment was not completed. Please try again.
+              {failureMessage || "The payment was not completed. Please try again."}
             </p>
             <div className="flex gap-3">
               <Button onClick={onClose} variant="outline" className="flex-1">
