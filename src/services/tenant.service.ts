@@ -5,6 +5,7 @@ export interface TenantLeaseInfo {
   isActive: boolean;
   startDate: string;
   endDate: string;
+  rentAmount: number | string;
   unit: {
     id: string;
     unitNumber: string;
