@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
+import axios from "axios";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,14 +48,6 @@ export default function CreateVacancyModal({ open, onOpenChange, units, onSucces
   });
 
   const vacantUnits = units.filter((u) => u.status === "VACANT");
-
-  useEffect(() => {
-    if (open && units.length > 0 && !formData.unitId) {
-      // Default to first vacant unit if available, otherwise first unit
-      const defaultUnit = vacantUnits.length > 0 ? vacantUnits[0] : units[0];
-      setFormData((prev) => ({ ...prev, unitId: defaultUnit.id }));
-    }
-  }, [open, units, vacantUnits, formData.unitId]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -108,7 +101,8 @@ export default function CreateVacancyModal({ open, onOpenChange, units, onSucces
 
     const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.unitId) {
+      const selectedUnitId = formData.unitId || vacantUnits[0]?.id;
+      if (!selectedUnitId) {
       toast.error("Please select a unit");
       return;
     }
@@ -116,7 +110,7 @@ export default function CreateVacancyModal({ open, onOpenChange, units, onSucces
     setIsLoading(true);
     try {
       await vacantListingService.createListing({
-        unitId: formData.unitId,
+        unitId: selectedUnitId,
         title: formData.title,
         description: formData.description,
         highlights: formData.highlights.split(",").map(h => h.trim()).filter(Boolean),
@@ -142,9 +136,14 @@ export default function CreateVacancyModal({ open, onOpenChange, units, onSucces
         contactPhone: "",
         availableFrom: new Date().toISOString().split("T")[0],
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      const msg = error.response?.data?.message;
+      const responseData = axios.isAxiosError<{
+        message?: string | string[];
+      }>(error)
+        ? error.response?.data
+        : undefined;
+      const msg = responseData?.message;
       toast.error(Array.isArray(msg) ? msg[0] : msg || "Failed to create listing");
     } finally {
       setIsLoading(false);
@@ -185,6 +184,11 @@ export default function CreateVacancyModal({ open, onOpenChange, units, onSucces
                    )}
                  </SelectContent>
               </Select>
+              {vacantUnits.length === 0 && (
+                <p className="mt-2 text-sm text-slate-500">
+                  No unadvertised vacant units are available. Mark a unit vacant or remove its existing listing first.
+                </p>
+              )}
             </div>
 
             <div>
@@ -298,7 +302,7 @@ export default function CreateVacancyModal({ open, onOpenChange, units, onSucces
             >
               Cancel
             </Button>
-            <Button type="submit" className="bg-emerald-500 hover:bg-emerald-600 text-white" disabled={isLoading}>
+            <Button type="submit" className="bg-emerald-500 hover:bg-emerald-600 text-white" disabled={isLoading || vacantUnits.length === 0}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create Listing
             </Button>

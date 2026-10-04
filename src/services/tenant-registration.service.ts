@@ -24,12 +24,10 @@ export interface RegisterTenantData {
 
 export const tenantRegistrationService = {
   /**
-   * Register a tenant with lease in one transaction
-   * Creates tenant, user account (optional), and lease
+   * Register a tenant and tenancy atomically.
    */
   async registerTenant(data: RegisterTenantData) {
-    // Step 1: Create tenant with user account
-    const tenantResponse = await api.post('/tenants', {
+    const response = await api.post('/tenants/register', {
       email: data.email,
       password: data.password || this.generatePassword(),
       fullName: data.fullName,
@@ -37,37 +35,14 @@ export const tenantRegistrationService = {
       nationalId: data.nationalId,
       emergencyContact: data.emergencyContact,
       occupation: data.occupation,
+      unitId: data.unitId,
+      startDate: new Date(data.startDate).toISOString(),
+      endDate: new Date(data.endDate).toISOString(),
+      rentAmount: Number(data.rentAmount),
+      deposit: Number(data.deposit),
     });
 
-    const tenant = tenantResponse.data;
-    const tenantId = tenant.tenantProfile?.id || tenant.id;
-    const userId = tenant.id; // the User row's id for rollback
-
-    try {
-      // Step 2: Create lease
-      const leaseResponse = await api.post('/leases', {
-        tenantId,
-        unitId: data.unitId,
-        startDate: new Date(data.startDate).toISOString(),
-        endDate: new Date(data.endDate).toISOString(),
-        rentAmount: Number(data.rentAmount),
-        deposit: Number(data.deposit),
-      });
-
-      return {
-        tenant,
-        lease: leaseResponse.data,
-        success: true,
-      };
-    } catch (error) {
-      // Rollback: delete the user we just created so no orphaned tenants pile up
-      try {
-        await api.delete(`/tenants/user/${userId}`);
-      } catch {
-        // Silently ignore rollback failures — backend may already handle cascades
-      }
-      throw error;
-    }
+    return response.data;
   },
 
   generatePassword(): string {

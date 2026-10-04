@@ -22,6 +22,18 @@ export interface UpdateVacantListingDto {
   isActive?: boolean;
 }
 
+export interface AvailableVacantUnit {
+  id: string;
+  unitNumber: string;
+  rentAmount: number;
+  status: string;
+  property: {
+    id: string;
+    name: string;
+    address: string;
+  };
+}
+
 export interface VacantListing {
   id: string;
   unitId: string;
@@ -93,6 +105,11 @@ export const vacantListingService = {
   // Protected endpoints - landlord only
   async getMyListings() {
     const response = await api.get("/vacant-listings/my-listings");
+    return response.data;
+  },
+
+  async getAvailableUnits(): Promise<AvailableVacantUnit[]> {
+    const response = await api.get("/vacant-listings/available-units");
     return response.data;
   },
 

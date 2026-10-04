@@ -4,8 +4,7 @@ import { useState, useEffect } from "react";
 import { Plus, Home, MapPin, Eye, Trash2, Loader2, ExternalLink, ChevronLeft, ChevronRight, X, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { vacantListingService, VacantListing } from "@/services/vacant-listing.service";
-import { propertyService, Property } from "@/services/property.service";
+import { vacantListingService, VacantListing, AvailableVacantUnit } from "@/services/vacant-listing.service";
 import { useSubscriptionStore } from "@/store/subscriptionStore";
 import CreateVacancyModal from "@/components/vacancies/CreateVacancyModal";
 import { toast } from "sonner";
@@ -13,7 +12,8 @@ import Link from "next/link";
 
 export default function VacanciesPage() {
   const [listings, setListings] = useState<VacantListing[]>([]);
-  const [properties, setProperties] = useState<Property[]>([]);
+  const [availableUnits, setAvailableUnits] = useState<AvailableVacantUnit[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -29,23 +29,9 @@ export default function VacanciesPage() {
     fetchSubscription();
   }, [fetchSubscription]);
 
-  const fetchData = async () => {
-    if (!hasVacancyAccess) return;
-    
+  const refreshData = () => {
     setIsLoading(true);
-    try {
-      const [listingsData, propertiesData] = await Promise.all([
-        vacantListingService.getMyListings(),
-        propertyService.getAll(),
-      ]);
-      setListings(listingsData);
-      setProperties(propertiesData);
-    } catch (error) {
-      console.error("Failed to fetch data", error);
-      toast.error("Failed to load vacancies");
-    } finally {
-      setIsLoading(false);
-    }
+    setRefreshKey((value) => value + 1);
   };
 
   const handleDelete = async (id: string) => {
@@ -56,7 +42,7 @@ export default function VacanciesPage() {
       await vacantListingService.deleteListing(id);
       toast.success("Listing removed");
       setListings((prev) => prev.filter((l) => l.id !== id));
-    } catch (error) {
+    } catch {
       toast.error("Failed to delete listing");
     } finally {
       setIsDeleting(null);
@@ -84,33 +70,50 @@ export default function VacanciesPage() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, [hasVacancyAccess]);
+    if (!hasVacancyAccess) return;
+
+    let isCurrent = true;
+    Promise.all([
+      vacantListingService.getMyListings(),
+      vacantListingService.getAvailableUnits(),
+    ])
+      .then(([listingsData, availableUnitsData]) => {
+        if (!isCurrent) return;
+        setListings(listingsData);
+        setAvailableUnits(availableUnitsData);
+      })
+      .catch((error) => {
+        if (!isCurrent) return;
+        console.error("Failed to fetch vacancy data:", error);
+        toast.error("Failed to load vacancies");
+      })
+      .finally(() => {
+        if (isCurrent) setIsLoading(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [hasVacancyAccess, refreshKey]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!galleryOpen) return;
-      if (e.key === 'Escape') closeGallery();
-      if (e.key === 'ArrowLeft') goToPrevious();
-      if (e.key === 'ArrowRight') goToNext();
+      if (e.key === 'Escape') {
+        setGalleryOpen(false);
+        setGalleryImages([]);
+        setCurrentImageIndex(0);
+      }
+      if (e.key === 'ArrowLeft') {
+        setCurrentImageIndex((prev) => prev === 0 ? galleryImages.length - 1 : prev - 1);
+      }
+      if (e.key === 'ArrowRight') {
+        setCurrentImageIndex((prev) => prev === galleryImages.length - 1 ? 0 : prev + 1);
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [galleryOpen]);
-
-  // Flatten units from properties and map to the required interface for the modal
-  const allUnits = properties.flatMap((p) => 
-    (p.units || []).map((u) => ({
-      id: u.id,
-      unitNumber: u.unitNumber,
-      rentAmount: Number(u.rentAmount),
-      status: u.status,
-      property: {
-        name: p.name,
-        address: p.address,
-      }
-    }))
-  );
+  }, [galleryOpen, galleryImages.length]);
 
   // Show upgrade prompt if user doesn't have access
   if (!hasVacancyAccess) {
@@ -191,7 +194,7 @@ export default function VacanciesPage() {
               No active advertisements
             </h3>
             <p className="text-slate-500 max-w-sm mb-6">
-              You haven't created any public listings for your vacant units yet.
+              You have not created any public listings for your vacant units yet.
             </p>
             <Button 
               onClick={() => setIsModalOpen(true)}
@@ -284,8 +287,8 @@ export default function VacanciesPage() {
         <CreateVacancyModal
           open={isModalOpen}
           onOpenChange={setIsModalOpen}
-          units={allUnits}
-          onSuccess={fetchData}
+          units={availableUnits}
+          onSuccess={refreshData}
         />
       )}
 
