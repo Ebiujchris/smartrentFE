@@ -15,10 +15,10 @@ import {
   LayoutGrid,
   Table2,
   Pencil,
-  Trash2,
   CheckCircle,
   Clock,
   AlertCircle,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTenantStore } from "@/store/tenantStore";
@@ -35,6 +35,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getLeaseStatus, getPaymentStatus, type LeaseStatus } from "@/lib/rentStatus";
 import { ErrorHandler } from "@/lib/errorHandler";
+import { leaseService } from "@/services/lease.service";
 import {
   Select,
   SelectContent,
@@ -141,12 +142,14 @@ export default function TenantsPage() {
     fetchTenants,
     createTenant,
     updateTenant,
-    deleteTenant,
   } = useTenantStore();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [tenantToDelete, setTenantToDelete] = useState<TenantItem | null>(null);
+  const [leaseToEnd, setLeaseToEnd] = useState<{
+    tenant: TenantItem;
+    lease: TenantLeaseInfo;
+  } | null>(null);
   const [selectedTenant, setSelectedTenant] = useState<TenantItem | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProperty, setSelectedProperty] = useState("all");
@@ -155,7 +158,7 @@ export default function TenantsPage() {
   const [formData, setFormData] = useState(emptyCreateForm);
   const [editFormData, setEditFormData] = useState(emptyEditForm);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isEndingTenancy, setIsEndingTenancy] = useState(false);
 
   // Payment management state
   const { payments, fetchPayments, recordPayment, createPayment } =
@@ -310,22 +313,22 @@ export default function TenantsPage() {
     }
   };
 
-  const handleDeleteTenant = async () => {
-    if (!tenantToDelete) return;
+  const handleEndTenancy = async () => {
+    if (!leaseToEnd) return;
 
-    setIsDeleting(true);
+    setIsEndingTenancy(true);
     try {
-      await deleteTenant(tenantToDelete.id);
+      await leaseService.terminateLease(leaseToEnd.lease.id);
       await fetchTenants();
-      toast.success("Tenant deleted", {
-        description: `${tenantToDelete.user.fullName} has been removed.`,
+      toast.success("Tenancy ended", {
+        description: `${leaseToEnd.tenant.user.fullName}'s lease has ended and unit ${leaseToEnd.lease.unit.unitNumber} is now vacant.`,
       });
-      setTenantToDelete(null);
+      setLeaseToEnd(null);
     } catch (error) {
-      console.error("Failed to delete tenant:", error);
+      console.error("Failed to end tenancy:", error);
       ErrorHandler.handleApiError(error);
     } finally {
-      setIsDeleting(false);
+      setIsEndingTenancy(false);
     }
   };
 
@@ -745,32 +748,35 @@ export default function TenantsPage() {
       </Dialog>
 
       <Dialog
-        open={!!tenantToDelete}
-        onOpenChange={(open) => !open && setTenantToDelete(null)}
+        open={!!leaseToEnd}
+        onOpenChange={(open) => !open && !isEndingTenancy && setLeaseToEnd(null)}
       >
         <DialogContent className="max-w-full sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete Tenant</DialogTitle>
+            <DialogTitle>End Tenancy</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete {tenantToDelete?.user.fullName}?
-              This action cannot be undone.
+              End {leaseToEnd?.tenant.user.fullName}&apos;s lease for unit{" "}
+              {leaseToEnd?.lease.unit.unitNumber}? The lease will be deactivated
+              and the unit marked vacant. Payment and agreement history will be
+              kept.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-3 pt-2">
             <Button
               type="button"
               variant="outline"
-              onClick={() => setTenantToDelete(null)}
+              onClick={() => setLeaseToEnd(null)}
+              disabled={isEndingTenancy}
             >
               Cancel
             </Button>
             <Button
               type="button"
-              className="bg-red-600 hover:bg-red-700"
-              onClick={handleDeleteTenant}
-              disabled={isDeleting}
+              className="bg-amber-700 hover:bg-amber-800 text-white"
+              onClick={handleEndTenancy}
+              disabled={isEndingTenancy}
             >
-              {isDeleting ? "Deleting..." : "Delete Tenant"}
+              {isEndingTenancy ? "Ending..." : "End Tenancy"}
             </Button>
           </div>
         </DialogContent>
@@ -1021,6 +1027,18 @@ export default function TenantsPage() {
                                     Schedule rent
                                   </Button>
                               ) : null}
+                              {displayedLease?.isActive && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-amber-800 border-amber-200 hover:bg-amber-50 bg-white text-xs w-full md:w-auto"
+                                  onClick={() => setLeaseToEnd({ tenant, lease: displayedLease })}
+                                >
+                                  <LogOut className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                                  End tenancy
+                                </Button>
+                              )}
                               <Button
                                 type="button"
                                 size="sm"
@@ -1030,16 +1048,6 @@ export default function TenantsPage() {
                               >
                                 <Pencil className="h-3 w-3 md:h-4 md:w-4 mr-1" />
                                 <span className="md:inline">Edit</span>
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                className="text-red-700 border-red-200 hover:bg-red-50 bg-white text-xs w-full md:w-auto"
-                                onClick={() => setTenantToDelete(tenant)}
-                              >
-                                <Trash2 className="h-3 w-3 md:h-4 md:w-4 mr-1" />
-                                <span className="md:inline">Delete</span>
                               </Button>
                             </div>
                           </td>
@@ -1163,6 +1171,17 @@ export default function TenantsPage() {
                             Schedule rent
                           </Button>
                       ) : null}
+                      {displayedLease?.isActive && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full text-amber-800 border-amber-200 hover:bg-amber-50 bg-white"
+                          onClick={() => setLeaseToEnd({ tenant, lease: displayedLease })}
+                        >
+                          <LogOut className="h-4 w-4 mr-2" />
+                          End tenancy
+                        </Button>
+                      )}
                       <div className="flex gap-2">
                         <Button
                           type="button"
@@ -1172,15 +1191,6 @@ export default function TenantsPage() {
                         >
                           <Pencil className="h-4 w-4 mr-2" />
                           Edit
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="flex-1 text-red-700 border-red-200 hover:bg-red-50 bg-white"
-                          onClick={() => setTenantToDelete(tenant)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
                         </Button>
                       </div>
                     </div>
