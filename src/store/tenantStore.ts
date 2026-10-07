@@ -98,6 +98,7 @@ export const useTenantStore = create<TenantStore>((set) => ({
         error: getErrorMessage(error, "Failed to delete tenant"),
         loading: false,
       });
+      throw error;
     }
   },
 

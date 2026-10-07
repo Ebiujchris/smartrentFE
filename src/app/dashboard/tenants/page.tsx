@@ -34,6 +34,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getLeaseStatus, getPaymentStatus, type LeaseStatus } from "@/lib/rentStatus";
+import { ErrorHandler } from "@/lib/errorHandler";
 import {
   Select,
   SelectContent,
@@ -322,9 +323,7 @@ export default function TenantsPage() {
       setTenantToDelete(null);
     } catch (error) {
       console.error("Failed to delete tenant:", error);
-      toast.error("Failed to delete tenant", {
-        description: "Please try again.",
-      });
+      ErrorHandler.handleApiError(error);
     } finally {
       setIsDeleting(false);
     }
