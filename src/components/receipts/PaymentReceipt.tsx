@@ -16,8 +16,27 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { formatPaymentDate } from "@/lib/dateUtils";
 
+export interface PaymentReceiptData {
+  id: string;
+  amount: number | string;
+  type?: string;
+  paidAt?: string | null;
+  paidDate?: string | null;
+  createdAt?: string | null;
+  method?: string | null;
+  notes?: string | null;
+  reference?: string | null;
+  tenant: { user: { fullName: string } };
+  lease: {
+    unit: {
+      unitNumber: string;
+      property: { name: string; address?: string | null };
+    };
+  };
+}
+
 interface PaymentReceiptProps {
-  payment: any;
+  payment: PaymentReceiptData;
   onClose: () => void;
 }
 
@@ -82,7 +101,10 @@ export default function PaymentReceipt({
     return formatPaymentDate(date);
   };
 
+  const isRentReceipt = payment.type === "RENT" || payment.type === "DEPOSIT";
   const receiptNumber = `RCP-${payment.id.slice(0, 8).toUpperCase()}`;
+  const receivedAmount = Number(payment.amount);
+  const receiptType = payment.type === "DEPOSIT" ? "Security Deposit" : "Rent";
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -106,7 +128,7 @@ export default function PaymentReceipt({
         </div>
 
         {/* Receipt Content */}
-        <div ref={receiptRef} className="p-8">
+        <div id="receipt-content" ref={receiptRef} className="p-8">
           {/* Company Header */}
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-2 mb-2">
@@ -122,7 +144,7 @@ export default function PaymentReceipt({
           {/* Receipt Title */}
           <div className="text-center mb-8 pb-4 border-b-2 border-slate-200">
             <h2 className="text-2xl font-bold text-slate-900 mb-2">
-              PAYMENT RECEIPT
+              {payment.type === "DEPOSIT" ? "SECURITY DEPOSIT RECEIPT" : "PAYMENT RECEIPT"}
             </h2>
             <p className="text-slate-600">Receipt No: {receiptNumber}</p>
           </div>
@@ -170,8 +192,8 @@ export default function PaymentReceipt({
                   <span>Payment Date</span>
                 </div>
                 <p className="font-semibold text-slate-900">
-                  {payment.paidDate
-                    ? formatDate(payment.paidDate)
+                  {payment.paidAt || payment.paidDate
+                    ? formatDate(payment.paidAt || payment.paidDate)
                     : formatDate(payment.createdAt)}
                 </p>
               </div>
@@ -221,15 +243,17 @@ export default function PaymentReceipt({
             </h3>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-slate-600">Rent Amount</span>
+                <span className="text-slate-600">
+                  {isRentReceipt ? `${receiptType} Amount Received` : "Rent Charge"}
+                </span>
                 <span className="font-semibold text-slate-900">
-                  UGX {Number(payment.amount).toLocaleString()}
+                  UGX {receivedAmount.toLocaleString()}
                 </span>
               </div>
               <div className="flex justify-between pt-3 border-t border-slate-200">
-                <span className="font-semibold text-slate-900">Total Paid</span>
+                <span className="font-semibold text-slate-900">Total Received</span>
                 <span className="text-2xl font-bold text-emerald-600">
-                  UGX {Number(payment.amount).toLocaleString()}
+                UGX {receivedAmount.toLocaleString()}
                 </span>
               </div>
             </div>
@@ -282,20 +306,16 @@ export default function PaymentReceipt({
           .print\\:hidden {
             display: none !important;
           }
-          ${receiptRef.current
-            ? `
-            #receipt-content,
-            #receipt-content * {
-              visibility: visible;
-            }
-            #receipt-content {
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 100%;
-            }
-          `
-            : ""}
+          #receipt-content,
+          #receipt-content * {
+            visibility: visible;
+          }
+          #receipt-content {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
         }
       `}</style>
     </div>

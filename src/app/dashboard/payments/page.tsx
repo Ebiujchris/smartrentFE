@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import {
   CreditCard,
-  Plus,
   CheckCircle,
   Clock,
   AlertCircle,
@@ -12,7 +11,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePaymentStore } from "@/store/paymentStore";
-import { useTenantStore } from "@/store/tenantStore";
 import {
   Dialog,
   DialogContent,
@@ -31,16 +29,45 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import PaymentReceipt from "@/components/receipts/PaymentReceipt";
+import PaymentReceipt, { type PaymentReceiptData } from "@/components/receipts/PaymentReceipt";
 import { formatPaymentDate, isValidDate, formatDate } from "@/lib/dateUtils";
+import { paymentService, type RentReceipt } from "@/services/payment.service";
+
+interface PaymentCharge {
+  id: string;
+  leaseId?: string;
+  status: string;
+  amount: number;
+  paidAmount?: number;
+  outstandingAmount?: number;
+  dueDate?: string;
+  paidDate?: string | null;
+  notes?: string | null;
+  tenant: {
+    user: {
+      fullName: string;
+      email: string;
+    };
+  };
+  lease: {
+    id: string;
+    unit: {
+      unitNumber: string;
+      property: {
+        name: string;
+        address?: string | null;
+      };
+    };
+  };
+}
 
 export default function PaymentsPage() {
   const { payments, loading, fetchPayments, recordRentReceipt } = usePaymentStore();
-  const { tenants, fetchTenants } = useTenantStore();
   const [isRecordOpen, setIsRecordOpen] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState<any>(null);
+  const [selectedPayment, setSelectedPayment] = useState<PaymentCharge | null>(null);
   const [showReceipt, setShowReceipt] = useState(false);
-  const [receiptPayment, setReceiptPayment] = useState<any>(null);
+  const [receiptPayment, setReceiptPayment] = useState<PaymentReceiptData | null>(null);
+  const [rentReceipts, setRentReceipts] = useState<RentReceipt[]>([]);
   const [recordData, setRecordData] = useState({
     amount: "",
     method: "CASH",
@@ -50,8 +77,21 @@ export default function PaymentsPage() {
 
   useEffect(() => {
     fetchPayments();
-    fetchTenants();
-  }, [fetchPayments, fetchTenants]);
+    paymentService
+      .getRentReceipts()
+      .then((rows) => setRentReceipts(Array.isArray(rows) ? rows : []))
+      .catch((error) => {
+        console.error("Failed to load rent receipts:", error);
+        toast.error("Could not load received rent receipts");
+      });
+  }, [fetchPayments]);
+
+  const rentReceivedTotal = rentReceipts
+    .filter((receipt) => receipt.type === "RENT")
+    .reduce((total, receipt) => total + Number(receipt.amount), 0);
+  const depositsReceivedTotal = rentReceipts
+    .filter((receipt) => receipt.type === "DEPOSIT")
+    .reduce((total, receipt) => total + Number(receipt.amount), 0);
 
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,6 +116,10 @@ export default function PaymentsPage() {
         reference: recordData.reference || undefined,
         notes: combinedNotes,
       });
+      setRentReceipts((receipts) => [
+        updatedPayment,
+        ...receipts.filter((receipt) => receipt.id !== updatedPayment.id),
+      ]);
       toast.success("Manual payment recorded", {
         description: `UGX ${amount.toLocaleString()} has been applied to the earliest rent due.`,
       });
@@ -92,11 +136,6 @@ export default function PaymentsPage() {
         description: "Please try again or contact support.",
       });
     }
-  };
-
-  const handleViewReceipt = (payment: any) => {
-    setReceiptPayment(payment);
-    setShowReceipt(true);
   };
 
   const getStatusBadge = (status: string) => {
@@ -137,11 +176,9 @@ export default function PaymentsPage() {
     <div className="space-y-4 md:space-y-6 p-4 md:p-0">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-            Payments
-          </h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Payments</h1>
           <p className="text-sm md:text-base text-slate-600 mt-1">
-            Track rent payments and receipts
+            Track rent charges separately from money received
           </p>
         </div>
       </div>
@@ -163,6 +200,9 @@ export default function PaymentsPage() {
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            These are scheduled rent charges. See <strong>Receipts received</strong> below for the full amounts actually collected, including advance rent and deposits.
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[880px]">
               <thead className="bg-slate-50 border-b border-slate-200">
@@ -174,7 +214,7 @@ export default function PaymentsPage() {
                     Property/Unit
                   </th>
                   <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Amount
+                    Rent Charge
                   </th>
                   <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Due Date
@@ -191,7 +231,7 @@ export default function PaymentsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
-                {payments.map((payment: any) => {
+                {payments.map((payment: PaymentCharge) => {
                   const paymentSource = payment.notes?.includes(
                     "SOURCE:TENANT_PORTAL",
                   )
@@ -373,10 +413,9 @@ export default function PaymentsPage() {
                                   />
                                 </div>
                                 <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3 text-sm text-emerald-800">
-                                  This will mark the payment as{" "}
-                                  <strong>PAID</strong> and it will appear the
-                                  same way as tenant-triggered payments in the
-                                  payment ledger and tenant view.
+                                  The receipt will be applied to the oldest
+                                  outstanding rent first. Any extra remains as
+                                  rent credit for future charges.
                                 </div>
                                 <div className="flex justify-end gap-3">
                                   <Button
@@ -403,15 +442,6 @@ export default function PaymentsPage() {
                                 ? `Paid on ${formatPaymentDate(payment.paidDate)}`
                                 : "Paid"}
                             </span>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleViewReceipt(payment)}
-                              className="md:ml-2 text-xs"
-                            >
-                              <FileText className="h-3 w-3 md:h-4 md:w-4 mr-1" />
-                              Receipt
-                            </Button>
                           </div>
                         )}
                       </td>
@@ -423,6 +453,96 @@ export default function PaymentsPage() {
           </div>
         </div>
       )}
+
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 px-4 py-4 md:px-6">
+          <h2 className="text-lg font-semibold text-slate-900">Receipts received</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Actual rent and security-deposit receipts, including advance payments.
+          </p>
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-lg bg-emerald-50 p-3">
+              <p className="text-xs font-medium text-emerald-800">Rent received</p>
+              <p className="mt-1 text-lg font-bold text-emerald-900">
+                UGX {rentReceivedTotal.toLocaleString()}
+              </p>
+            </div>
+            <div className="rounded-lg bg-blue-50 p-3">
+              <p className="text-xs font-medium text-blue-800">Security deposits received</p>
+              <p className="mt-1 text-lg font-bold text-blue-900">
+                UGX {depositsReceivedTotal.toLocaleString()}
+              </p>
+            </div>
+            <div className="rounded-lg bg-slate-100 p-3">
+              <p className="text-xs font-medium text-slate-700">Total receipts</p>
+              <p className="mt-1 text-lg font-bold text-slate-900">
+                UGX {(rentReceivedTotal + depositsReceivedTotal).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        </div>
+        {rentReceipts.length === 0 ? (
+          <p className="px-4 py-8 text-center text-sm text-slate-500">
+            No rent or deposit receipts have been recorded yet.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px]">
+              <thead className="bg-slate-50">
+                <tr>
+                  {["Tenant", "Property / Unit", "Receipt Type", "Amount Received", "Date", "Method", ""].map((heading) => (
+                    <th key={heading} className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+                      {heading}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {rentReceipts.map((receipt) => (
+                  <tr key={receipt.id}>
+                    <td className="px-4 py-3 text-sm font-medium text-slate-900">
+                      {receipt.tenant.user.fullName}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-700">
+                      {receipt.lease.unit.property.name} · Unit {receipt.lease.unit.unitNumber}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-700">
+                      {receipt.type === "DEPOSIT" ? "Security deposit" : "Rent"}
+                      {receipt.type === "RENT" && Number(receipt.unallocatedAmount || 0) > 0 && (
+                        <span className="block text-xs text-amber-700">
+                          UGX {Number(receipt.unallocatedAmount).toLocaleString()} rent credit
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm font-semibold text-emerald-700">
+                      UGX {Number(receipt.amount).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-600">
+                      {formatPaymentDate(receipt.paidAt)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-600">
+                      {receipt.method?.replaceAll("_", " ") || "N/A"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setReceiptPayment(receipt);
+                          setShowReceipt(true);
+                        }}
+                      >
+                        <FileText className="mr-1 h-4 w-4" />
+                        Receipt
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
       {/* Receipt Modal */}
       {showReceipt && receiptPayment && (

@@ -33,8 +33,12 @@ export interface RecordRentReceiptDto {
 export interface RentReceipt {
   id: string;
   amount: number | string;
+  unallocatedAmount?: number | string;
   paidAt: string;
   type: "RENT" | "DEPOSIT";
+  method?: string;
+  reference?: string | null;
+  notes?: string | null;
   tenant: {
     id: string;
     user: {
@@ -43,13 +47,26 @@ export interface RentReceipt {
   };
   lease: {
     id: string;
+    rentAmount?: number | string;
+    deposit?: number | string;
+    startDate?: string;
+    endDate?: string;
     unit: {
       unitNumber: string;
       property: {
         name: string;
+        address?: string;
       };
     };
   };
+  allocations?: Array<{
+    amount: number | string;
+    payment: {
+      dueDate: string;
+      periodStart?: string | null;
+      periodEnd?: string | null;
+    };
+  }>;
 }
 
 export const paymentService = {
