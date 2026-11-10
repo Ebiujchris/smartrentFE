@@ -1386,7 +1386,7 @@ export default function TenantsPage() {
                 ? "Add a rent charge with its due date. It will remain outstanding until recorded as received."
                 : receiptType === "DEPOSIT"
                   ? "Record a security-deposit receipt separately from rent."
-                  : "Record rent received. It is applied to the earliest rent period first; any extra is kept as rent credit."}
+                  : "Record rent received. It is applied to the earliest rent period first; any extra stays available toward upcoming rent."}
             </DialogDescription>
           </DialogHeader>
           {(selectedPayment || isCreatingNew) && (

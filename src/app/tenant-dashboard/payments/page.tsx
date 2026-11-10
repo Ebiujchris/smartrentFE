@@ -21,6 +21,7 @@ interface RentReceipt {
   method: string;
   reference?: string | null;
   unallocatedAmount: number | string;
+  lease?: { rentAmount?: number | string };
   allocations: Array<{
     amount: number | string;
     payment: { periodStart?: string | null; periodEnd?: string | null };
@@ -182,7 +183,7 @@ export default function TenantPaymentsPage() {
       <section className="space-y-3">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Payment receipts</h2>
-          <p className="text-sm text-slate-600">Recorded rent and security-deposit payments, including the rent periods covered.</p>
+          <p className="text-sm text-slate-600">Amounts received, rent periods paid, and any advance still available for upcoming rent.</p>
         </div>
         {receipts.length === 0 ? (
           <p className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-600">
@@ -209,6 +210,11 @@ export default function TenantPaymentsPage() {
                         : null,
                     )
                     .filter((period): period is string => Boolean(period));
+                  const advanceRemaining = Number(receipt.unallocatedAmount || 0);
+                  const monthlyRent = Number(receipt.lease?.rentAmount || 0);
+                  const monthsRemaining = monthlyRent > 0
+                    ? Math.ceil(advanceRemaining / monthlyRent)
+                    : 0;
 
                   return (
                     <tr key={receipt.id}>
@@ -216,7 +222,19 @@ export default function TenantPaymentsPage() {
                       <td className="px-4 py-3 text-sm text-slate-700">{receipt.type === "DEPOSIT" ? "Security deposit" : "Rent"}</td>
                       <td className="px-4 py-3 text-sm font-medium text-slate-900">UGX {Number(receipt.amount).toLocaleString()}</td>
                       <td className="px-4 py-3 text-sm text-slate-700">
-                        {periods.length ? periods.join(", ") : receipt.type === "DEPOSIT" ? "Not applied to rent" : "Rent credit"}
+                        {periods.length > 0 && (
+                          <div>{periods.join(", ")}</div>
+                        )}
+                        {receipt.type === "DEPOSIT" ? (
+                          "Kept separate from rent"
+                        ) : advanceRemaining > 0 ? (
+                          <div className="text-amber-800">
+                            Advance left for upcoming rent: UGX {advanceRemaining.toLocaleString()}
+                            {monthsRemaining > 0 && ` (about ${monthsRemaining} month${monthsRemaining === 1 ? "" : "s"})`}
+                          </div>
+                        ) : periods.length === 0 ? (
+                          "No rent periods applied yet"
+                        ) : null}
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-700">
                         {receipt.method.replaceAll("_", " ")}

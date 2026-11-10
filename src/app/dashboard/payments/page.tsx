@@ -346,7 +346,7 @@ export default function PaymentsPage() {
                                     }
                                   />
                                   <p className="mt-1 text-xs text-slate-500">
-                                    Remaining on this charge is UGX {Number(payment.outstandingAmount ?? Number(payment.amount) - Number(payment.paidAmount || 0)).toLocaleString()}; any extra is kept as rent credit.
+                                    Remaining on this charge is UGX {Number(payment.outstandingAmount ?? Number(payment.amount) - Number(payment.paidAmount || 0)).toLocaleString()}; any extra stays available toward upcoming rent.
                                   </p>
                                 </div>
                                 <div>
@@ -415,7 +415,7 @@ export default function PaymentsPage() {
                                 <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3 text-sm text-emerald-800">
                                   The receipt will be applied to the oldest
                                   outstanding rent first. Any extra remains as
-                                  rent credit for future charges.
+                                  an advance balance for upcoming rent.
                                 </div>
                                 <div className="flex justify-end gap-3">
                                   <Button
@@ -502,6 +502,9 @@ export default function PaymentsPage() {
                   <tr key={receipt.id}>
                     <td className="px-4 py-3 text-sm font-medium text-slate-900">
                       {receipt.tenant.user.fullName}
+                      <span className="block text-xs text-slate-500">
+                        RCP-{receipt.id.slice(0, 8).toUpperCase()}
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-slate-700">
                       {receipt.lease.unit.property.name} · Unit {receipt.lease.unit.unitNumber}
@@ -509,8 +512,14 @@ export default function PaymentsPage() {
                     <td className="px-4 py-3 text-sm text-slate-700">
                       {receipt.type === "DEPOSIT" ? "Security deposit" : "Rent"}
                       {receipt.type === "RENT" && Number(receipt.unallocatedAmount || 0) > 0 && (
-                        <span className="block text-xs text-amber-700">
-                          UGX {Number(receipt.unallocatedAmount).toLocaleString()} rent credit
+                        <span className="mt-1 block text-xs text-amber-800">
+                          {Number(receipt.amount) - Number(receipt.unallocatedAmount) > 0 && (
+                            <>Applied to rent: UGX {(Number(receipt.amount) - Number(receipt.unallocatedAmount)).toLocaleString()}<br /></>
+                          )}
+                          Advance left for upcoming rent: UGX {Number(receipt.unallocatedAmount).toLocaleString()}
+                          {Number(receipt.lease.rentAmount) > 0 && (
+                            <> (about {Math.ceil(Number(receipt.unallocatedAmount) / Number(receipt.lease.rentAmount))} month{Math.ceil(Number(receipt.unallocatedAmount) / Number(receipt.lease.rentAmount)) === 1 ? "" : "s"})</>
+                          )}
                         </span>
                       )}
                     </td>

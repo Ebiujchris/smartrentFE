@@ -26,8 +26,17 @@ export interface PaymentReceiptData {
   method?: string | null;
   notes?: string | null;
   reference?: string | null;
+  unallocatedAmount?: number | string;
+  allocations?: Array<{
+    amount: number | string;
+    payment: {
+      periodStart?: string | null;
+      periodEnd?: string | null;
+    };
+  }>;
   tenant: { user: { fullName: string } };
   lease: {
+    rentAmount?: number | string;
     unit: {
       unitNumber: string;
       property: { name: string; address?: string | null };
@@ -104,6 +113,12 @@ export default function PaymentReceipt({
   const isRentReceipt = payment.type === "RENT" || payment.type === "DEPOSIT";
   const receiptNumber = `RCP-${payment.id.slice(0, 8).toUpperCase()}`;
   const receivedAmount = Number(payment.amount);
+  const advanceRemaining = Number(payment.unallocatedAmount || 0);
+  const appliedAmount = Math.max(0, receivedAmount - advanceRemaining);
+  const monthlyRent = Number(payment.lease.rentAmount || 0);
+  const approximateMonthsRemaining = monthlyRent > 0
+    ? Math.ceil(advanceRemaining / monthlyRent)
+    : 0;
   const receiptType = payment.type === "DEPOSIT" ? "Security Deposit" : "Rent";
 
   return (
@@ -253,9 +268,49 @@ export default function PaymentReceipt({
               <div className="flex justify-between pt-3 border-t border-slate-200">
                 <span className="font-semibold text-slate-900">Total Received</span>
                 <span className="text-2xl font-bold text-emerald-600">
-                UGX {receivedAmount.toLocaleString()}
+                  UGX {receivedAmount.toLocaleString()}
                 </span>
               </div>
+              {payment.type === "RENT" && (
+                <>
+                  {appliedAmount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600">Applied to rent periods</span>
+                      <span className="font-medium text-slate-900">
+                        UGX {appliedAmount.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                  {advanceRemaining > 0 && (
+                    <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                      <p className="font-semibold">
+                        Advance left for upcoming rent: UGX {advanceRemaining.toLocaleString()}
+                      </p>
+                      {approximateMonthsRemaining > 0 && (
+                        <p className="mt-1">
+                          About {approximateMonthsRemaining} month{approximateMonthsRemaining === 1 ? "" : "s"} at the current monthly rent.
+                        </p>
+                      )}
+                      <p className="mt-1">
+                        This money was received; it has not yet been matched to a rent period.
+                      </p>
+                    </div>
+                  )}
+                  {(payment.allocations?.length || 0) > 0 && (
+                    <div className="text-sm text-slate-600">
+                      <p className="font-medium text-slate-700">Rent periods paid</p>
+                      {payment.allocations?.map((allocation, index) => (
+                        <p key={`${allocation.payment.periodStart}-${index}`}>
+                          UGX {Number(allocation.amount).toLocaleString()}
+                          {allocation.payment.periodStart && allocation.payment.periodEnd
+                            ? ` · ${formatDate(allocation.payment.periodStart)} – ${formatDate(allocation.payment.periodEnd)}`
+                            : ""}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
 
