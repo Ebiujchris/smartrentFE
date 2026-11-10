@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import {
-  CreditCard,
   CheckCircle,
   Clock,
   AlertCircle,
@@ -41,6 +40,8 @@ interface PaymentCharge {
   paidAmount?: number;
   outstandingAmount?: number;
   dueDate?: string;
+  periodStart?: string | null;
+  periodEnd?: string | null;
   paidDate?: string | null;
   notes?: string | null;
   tenant: {
@@ -63,6 +64,7 @@ interface PaymentCharge {
 
 export default function PaymentsPage() {
   const { payments, loading, fetchPayments, recordRentReceipt } = usePaymentStore();
+  const [expandedLeaseIds, setExpandedLeaseIds] = useState<string[]>([]);
   const [isRecordOpen, setIsRecordOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<PaymentCharge | null>(null);
   const [showReceipt, setShowReceipt] = useState(false);
@@ -92,6 +94,47 @@ export default function PaymentsPage() {
   const depositsReceivedTotal = rentReceipts
     .filter((receipt) => receipt.type === "DEPOSIT")
     .reduce((total, receipt) => total + Number(receipt.amount), 0);
+  const paymentCharges = payments as PaymentCharge[];
+  const outstandingCharges = paymentCharges.filter((payment) => {
+    if (payment.status === "CANCELLED" || payment.status === "PAID") return false;
+    return Number(
+      payment.outstandingAmount ??
+        Math.max(0, Number(payment.amount) - Number(payment.paidAmount || 0)),
+    ) > 0;
+  });
+  const coveredChargeGroups = Array.from(
+    paymentCharges.reduce((groups, payment) => {
+      if (payment.status === "CANCELLED") return groups;
+      const outstanding = Number(
+        payment.outstandingAmount ??
+          Math.max(0, Number(payment.amount) - Number(payment.paidAmount || 0)),
+      );
+      if (payment.status !== "PAID" && outstanding > 0) return groups;
+
+      const leaseId = payment.leaseId || payment.lease.id;
+      const group = groups.get(leaseId) ?? {
+        leaseId,
+        tenantName: payment.tenant.user.fullName,
+        propertyName: payment.lease.unit.property.name,
+        unitNumber: payment.lease.unit.unitNumber,
+        charges: [],
+      };
+      group.charges.push(payment);
+      groups.set(leaseId, group);
+      return groups;
+    }, new Map<string, {
+      leaseId: string;
+      tenantName: string;
+      propertyName: string;
+      unitNumber: string;
+      charges: PaymentCharge[];
+    }>()),
+  ).map(([, group]) => ({
+    ...group,
+    charges: [...group.charges].sort(
+      (a, b) => new Date(a.dueDate || "").getTime() - new Date(b.dueDate || "").getTime(),
+    ),
+  }));
 
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,6 +207,14 @@ export default function PaymentsPage() {
     }
   };
 
+  const toggleCoveredPeriods = (leaseId: string) => {
+    setExpandedLeaseIds((current) =>
+      current.includes(leaseId)
+        ? current.filter((id) => id !== leaseId)
+        : [...current, leaseId],
+    );
+  };
+
   if (loading && payments.length === 0) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -183,25 +234,14 @@ export default function PaymentsPage() {
         </div>
       </div>
 
-      {payments.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-12">
-          <div className="text-center max-w-md mx-auto">
-            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CreditCard className="h-8 w-8 text-emerald-600" />
-            </div>
-            <h2 className="text-xl md:text-2xl font-bold text-slate-900 mb-2">
-              No payments recorded
-            </h2>
-            <p className="text-sm md:text-base text-slate-600 mb-6">
-              Payments will appear here once tenants are assigned to units with
-              active leases
-            </p>
-          </div>
+      {outstandingCharges.length === 0 ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+          No outstanding rent charges. See the receipt list below for amounts collected.
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-            These are scheduled rent charges. See <strong>Receipts received</strong> below for the full amounts actually collected, including advance rent and deposits.
+            Outstanding or partially paid rent charges only. Fully covered rent periods are grouped below; the receipts section records the actual money received.
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[880px]">
@@ -231,7 +271,7 @@ export default function PaymentsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
-                {payments.map((payment: PaymentCharge) => {
+                {outstandingCharges.map((payment) => {
                   const paymentSource = payment.notes?.includes(
                     "SOURCE:TENANT_PORTAL",
                   )
@@ -269,6 +309,7 @@ export default function PaymentsPage() {
                             UGX {Number(payment.paidAmount).toLocaleString()} paid · UGX {Number(payment.outstandingAmount ?? Number(payment.amount) - Number(payment.paidAmount)).toLocaleString()} due
                           </div>
                         )}
+
                       </td>
                        <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-slate-500">
                          {payment.dueDate ? formatDate(payment.dueDate) : '-'}
@@ -452,6 +493,94 @@ export default function PaymentsPage() {
             </table>
           </div>
         </div>
+      )}
+
+      {coveredChargeGroups.length > 0 && (
+        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 px-4 py-4">
+            <h2 className="text-lg font-semibold text-slate-900">
+              Rent periods covered
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              These are monthly rent charges paid from receipts, not additional
+              payments received.
+            </p>
+          </div>
+          <div className="divide-y divide-slate-200">
+            {coveredChargeGroups.map((group) => {
+              const isExpanded = expandedLeaseIds.includes(group.leaseId);
+              const totalCovered = group.charges.reduce(
+                (total, charge) =>
+                  total + Number(charge.paidAmount ?? charge.amount),
+                0,
+              );
+              const firstPeriod = group.charges[0];
+              const lastPeriod = group.charges[group.charges.length - 1];
+              return (
+                <div key={group.leaseId}>
+                  <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-medium text-slate-900">
+                        {group.tenantName}
+                      </p>
+                      <p className="text-sm text-slate-600">
+                        {group.propertyName} · Unit {group.unitNumber}
+                      </p>
+                      <p className="mt-1 text-sm text-emerald-800">
+                        {group.charges.length} rent period
+                        {group.charges.length === 1 ? "" : "s"} covered · UGX{" "}
+                        {totalCovered.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {formatDate(
+                          firstPeriod.periodStart || firstPeriod.dueDate || "",
+                        )}
+                        {" – "}
+                        {formatDate(
+                          lastPeriod.periodEnd || lastPeriod.dueDate || "",
+                        )}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => toggleCoveredPeriods(group.leaseId)}
+                    >
+                      {isExpanded ? "Hide periods" : "Show periods"}
+                    </Button>
+                  </div>
+                  {isExpanded && (
+                    <div className="border-t border-slate-100 bg-slate-50 px-4 py-2">
+                      {group.charges.map((charge) => (
+                        <div
+                          key={charge.id}
+                          className="flex flex-col gap-1 py-2 text-sm sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <span className="text-slate-700">
+                            {formatDate(
+                              charge.periodStart || charge.dueDate || "",
+                            )}
+                            {" – "}
+                            {formatDate(
+                              charge.periodEnd || charge.dueDate || "",
+                            )}
+                          </span>
+                          <span className="font-medium text-emerald-800">
+                            Covered · UGX{" "}
+                            {Number(
+                              charge.paidAmount ?? charge.amount,
+                            ).toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
       )}
 
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
