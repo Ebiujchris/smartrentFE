@@ -35,13 +35,14 @@ import PaymentReceipt from "@/components/receipts/PaymentReceipt";
 import { formatPaymentDate, isValidDate, formatDate } from "@/lib/dateUtils";
 
 export default function PaymentsPage() {
-  const { payments, loading, fetchPayments, recordPayment } = usePaymentStore();
+  const { payments, loading, fetchPayments, recordRentReceipt } = usePaymentStore();
   const { tenants, fetchTenants } = useTenantStore();
   const [isRecordOpen, setIsRecordOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
   const [showReceipt, setShowReceipt] = useState(false);
   const [receiptPayment, setReceiptPayment] = useState<any>(null);
   const [recordData, setRecordData] = useState({
+    amount: "",
     method: "CASH",
     reference: "",
     notes: "",
@@ -62,21 +63,28 @@ export default function PaymentsPage() {
         ? `SOURCE:MANUAL_CLEARANCE\n${noteValue}`
         : "SOURCE:MANUAL_CLEARANCE";
 
-      const updatedPayment = await recordPayment(
-        selectedPayment.id,
-        recordData.method,
-        recordData.reference,
-        combinedNotes,
-      );
-      toast.success("Manual payment clearance recorded!", {
-        description: `UGX ${Number(selectedPayment.amount).toLocaleString()} has been marked as paid and reflected in the ledger.`,
+      const amount = Number(recordData.amount);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        toast.error("Enter a valid payment amount");
+        return;
+      }
+
+      const updatedPayment = await recordRentReceipt({
+        leaseId: selectedPayment.leaseId || selectedPayment.lease.id,
+        amount,
+        method: recordData.method,
+        reference: recordData.reference || undefined,
+        notes: combinedNotes,
+      });
+      toast.success("Manual payment recorded", {
+        description: `UGX ${amount.toLocaleString()} has been applied to the earliest rent due.`,
       });
       setIsRecordOpen(false);
       setSelectedPayment(null);
-      setRecordData({ method: "CASH", reference: "", notes: "" });
+      setRecordData({ amount: "", method: "CASH", reference: "", notes: "" });
 
       // Show receipt after recording payment
-      setReceiptPayment(updatedPayment);
+      setReceiptPayment({ ...updatedPayment, paidDate: updatedPayment.paidAt });
       setShowReceipt(true);
     } catch (error) {
       console.error("Failed to record payment:", error);
@@ -96,6 +104,7 @@ export default function PaymentsPage() {
       PAID: "bg-emerald-100 text-emerald-700",
       PENDING: "bg-yellow-100 text-yellow-700",
       OVERDUE: "bg-red-100 text-red-700",
+      PARTIALLY_PAID: "bg-amber-100 text-amber-800",
       CANCELLED: "bg-slate-100 text-slate-700",
     };
     return styles[status as keyof typeof styles] || styles.PENDING;
@@ -109,6 +118,8 @@ export default function PaymentsPage() {
         return <Clock className="h-4 w-4" />;
       case "OVERDUE":
         return <AlertCircle className="h-4 w-4" />;
+      case "PARTIALLY_PAID":
+        return <Clock className="h-4 w-4" />;
       default:
         return <Clock className="h-4 w-4" />;
     }
@@ -213,6 +224,11 @@ export default function PaymentsPage() {
                         <div className="text-xs md:text-sm font-semibold text-slate-900">
                           UGX {Number(payment.amount).toLocaleString()}
                         </div>
+                        {Number(payment.paidAmount || 0) > 0 && payment.status !== "PAID" && (
+                          <div className="text-xs text-slate-500">
+                            UGX {Number(payment.paidAmount).toLocaleString()} paid · UGX {Number(payment.outstandingAmount ?? Number(payment.amount) - Number(payment.paidAmount)).toLocaleString()} due
+                          </div>
+                        )}
                       </td>
                        <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-slate-500">
                          {payment.dueDate ? formatDate(payment.dueDate) : '-'}
@@ -240,7 +256,15 @@ export default function PaymentsPage() {
                             }
                             onOpenChange={(open) => {
                               setIsRecordOpen(open);
-                              if (open) setSelectedPayment(payment);
+                              if (open) {
+                                setSelectedPayment(payment);
+                                setRecordData({
+                                  amount: String(payment.outstandingAmount ?? Number(payment.amount) - Number(payment.paidAmount || 0)),
+                                  method: "CASH",
+                                  reference: "",
+                                  notes: "",
+                                });
+                              }
                               else setSelectedPayment(null);
                             }}
                           >
@@ -273,9 +297,17 @@ export default function PaymentsPage() {
                                 <div>
                                   <Label>Amount</Label>
                                   <Input
-                                    value={`UGX ${Number(payment.amount).toLocaleString()}`}
-                                    disabled
+                                    type="number"
+                                    min="0.01"
+                                    step="0.01"
+                                    value={recordData.amount}
+                                    onChange={(e) =>
+                                      setRecordData({ ...recordData, amount: e.target.value })
+                                    }
                                   />
+                                  <p className="mt-1 text-xs text-slate-500">
+                                    Remaining on this charge is UGX {Number(payment.outstandingAmount ?? Number(payment.amount) - Number(payment.paidAmount || 0)).toLocaleString()}; any extra is kept as rent credit.
+                                  </p>
                                 </div>
                                 <div>
                                   <Label htmlFor="method">

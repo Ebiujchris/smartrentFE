@@ -16,7 +16,7 @@ import {
   RotateCcw,
   X,
 } from "lucide-react";
-import { paymentService } from "@/services/payment.service";
+import { paymentService, type RentReceipt } from "@/services/payment.service";
 import { leaseService } from "@/services/lease.service";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -24,6 +24,8 @@ import { toast } from "sonner";
 type PaymentRow = {
   id: string;
   amount: number | string;
+  paidAmount?: number | string;
+  outstandingAmount?: number | string;
   dueDate: string;
   paidDate?: string | null;
   status: string;
@@ -55,7 +57,7 @@ type CalendarEvent = {
   payment: PaymentRow;
   date: Date;
   kind: "due" | "received";
-  status: "DUE" | "OVERDUE" | "PAID" | "CANCELLED";
+  status: "DUE" | "OVERDUE" | "PARTIALLY_PAID" | "PAID" | "CANCELLED";
 };
 
 type EventFilter = "all" | "due" | "received";
@@ -122,8 +124,8 @@ function formatLongDate(date: Date): string {
 function getDueStatus(payment: PaymentRow, dueDate: Date, today: Date): CalendarEvent["status"] {
   if (payment.status === "CANCELLED") return "CANCELLED";
   if (payment.status === "PAID") return "PAID";
-  if (payment.status === "OVERDUE") return "OVERDUE";
-  return dateKey(dueDate) < dateKey(today) ? "OVERDUE" : "DUE";
+  if (payment.status === "OVERDUE" || dateKey(dueDate) < dateKey(today)) return "OVERDUE";
+  return payment.status === "PARTIALLY_PAID" ? "PARTIALLY_PAID" : "DUE";
 }
 
 function getPaymentLocation(payment: PaymentRow): string {
@@ -136,6 +138,7 @@ function getPaymentLocation(payment: PaymentRow): string {
 export default function RentCalendarPage() {
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [leases, setLeases] = useState<LeaseRow[]>([]);
+  const [rentReceipts, setRentReceipts] = useState<RentReceipt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [visibleMonth, setVisibleMonth] = useState(() => {
@@ -156,11 +159,16 @@ export default function RentCalendarPage() {
   useEffect(() => {
     let isCurrent = true;
 
-    Promise.all([paymentService.getAllPayments(), leaseService.getAllLeases()])
-      .then(([paymentRows, leaseRows]) => {
+    Promise.all([
+      paymentService.getAllPayments(),
+      leaseService.getAllLeases(),
+      paymentService.getRentReceipts(),
+    ])
+      .then(([paymentRows, leaseRows, receiptRows]) => {
         if (!isCurrent) return;
         setPayments(Array.isArray(paymentRows) ? paymentRows : []);
         setLeases(Array.isArray(leaseRows) ? leaseRows : []);
+        setRentReceipts(Array.isArray(receiptRows) ? receiptRows : []);
       })
       .catch((error) => {
         if (!isCurrent) return;
@@ -194,7 +202,7 @@ export default function RentCalendarPage() {
 
   const allEvents = useMemo(() => {
     const today = new Date();
-    return payments.flatMap((payment): CalendarEvent[] => {
+    const dueEvents = payments.flatMap((payment): CalendarEvent[] => {
       const events: CalendarEvent[] = [];
       const dueDate = parseCalendarDate(payment.dueDate);
       if (dueDate && payment.status !== "CANCELLED") {
@@ -207,19 +215,35 @@ export default function RentCalendarPage() {
         });
       }
 
-      const paidDate = parseCalendarDate(payment.paidDate);
-      if (paidDate && payment.status === "PAID") {
-        events.push({
-          id: `${payment.id}-received`,
-          payment,
-          date: paidDate,
-          kind: "received",
-          status: "PAID",
-        });
-      }
       return events;
     });
-  }, [payments]);
+    const receivedEvents = rentReceipts
+      .filter((receipt) => receipt.type === "RENT")
+      .flatMap((receipt): CalendarEvent[] => {
+        const receivedDate = parseCalendarDate(receipt.paidAt);
+        if (!receivedDate) return [];
+        return [{
+          id: `${receipt.id}-received`,
+          payment: {
+            id: receipt.id,
+            amount: receipt.amount,
+            paidAmount: receipt.amount,
+            outstandingAmount: 0,
+            dueDate: receipt.paidAt,
+            paidDate: receipt.paidAt,
+            status: "PAID",
+            leaseId: receipt.lease.id,
+            tenantId: receipt.tenant.id,
+            tenant: receipt.tenant,
+            lease: receipt.lease,
+          },
+          date: receivedDate,
+          kind: "received",
+          status: "PAID",
+        }];
+      });
+    return [...dueEvents, ...receivedEvents];
+  }, [payments, rentReceipts]);
 
   const filteredEvents = useMemo(() => {
     return allEvents.filter((event) => {
@@ -564,13 +588,20 @@ export default function RentCalendarPage() {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-2">
                             <p className="text-sm font-semibold text-slate-900">{isReceived ? "Payment received" : "Rent due"}</p>
-                            <p className="shrink-0 text-sm font-semibold tabular-nums text-slate-900">{formatCurrency(event.payment.amount)}</p>
+                            <p className="shrink-0 text-sm font-semibold tabular-nums text-slate-900">
+                              {formatCurrency(
+                                isReceived
+                                  ? event.payment.amount
+                                  : event.payment.outstandingAmount ??
+                                      Math.max(0, Number(event.payment.amount) - Number(event.payment.paidAmount || 0)),
+                              )}
+                            </p>
                           </div>
                           <p className="mt-1 truncate text-sm text-slate-700">{event.payment.tenant?.user?.fullName || "Tenant"}</p>
                           <p className="truncate text-xs text-slate-500">{getPaymentLocation(event.payment)}</p>
                           <div className="mt-2 flex items-center justify-between gap-2">
-                            <span className={`inline-flex items-center gap-1 rounded-sm px-2 py-1 text-[11px] font-medium ${isReceived ? "bg-emerald-50 text-emerald-800" : isOverdue ? "bg-rose-50 text-rose-800" : event.status === "PAID" ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>
-                              {isReceived ? "Paid on this date" : event.status === "PAID" ? "Paid" : event.status === "OVERDUE" ? "Overdue" : "Upcoming"}
+                            <span className={`inline-flex items-center gap-1 rounded-sm px-2 py-1 text-[11px] font-medium ${isReceived || event.status === "PAID" ? "bg-emerald-50 text-emerald-800" : isOverdue ? "bg-rose-50 text-rose-800" : "bg-amber-50 text-amber-800"}`}>
+                              {isReceived ? "Rent received on this date" : event.status === "PAID" ? "Paid" : event.status === "OVERDUE" ? "Overdue" : event.status === "PARTIALLY_PAID" ? "Partially paid" : "Upcoming"}
                             </span>
                             {!isReceived && event.status !== "PAID" && <Link href="/dashboard/payments" className="text-xs font-medium text-emerald-700 hover:text-emerald-900">Record payment <ArrowRight className="ml-0.5 inline h-3 w-3" /></Link>}
                           </div>

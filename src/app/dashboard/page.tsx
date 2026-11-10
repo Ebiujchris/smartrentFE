@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useCallback } from "react";
+import { useEffect, useMemo, useCallback, useState } from "react";
 import {
   DollarSign,
   Home,
@@ -15,6 +15,7 @@ import { usePropertyStore } from "@/store/propertyStore";
 import { usePaymentStore } from "@/store/paymentStore";
 import { useMaintenanceStore } from "@/store/maintenanceStore";
 import StatCard from "@/components/dashboard/StatCard";
+import { paymentService, RentReceipt } from "@/services/payment.service";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -22,11 +23,18 @@ export default function DashboardPage() {
   const { properties, fetchProperties } = usePropertyStore();
   const { payments, fetchPayments } = usePaymentStore();
   const { requests, fetchRequests } = useMaintenanceStore();
+  const [rentReceipts, setRentReceipts] = useState<RentReceipt[]>([]);
 
   useEffect(() => {
     fetchProperties();
     fetchPayments();
     fetchRequests();
+    paymentService
+      .getRentReceipts()
+      .then(setRentReceipts)
+      .catch((error) => {
+        console.error("Failed to load rent receipts for dashboard:", error);
+      });
   }, [fetchProperties, fetchPayments, fetchRequests]);
 
   // Memoize calculated stats to prevent recalculation on every render
@@ -43,16 +51,35 @@ export default function DashboardPage() {
     );
     const vacantUnits = totalUnits - occupiedUnits;
 
-    const paidPayments = payments.filter((p: any) => p.status === "PAID");
-    const monthlyRevenue = paidPayments.reduce(
-      (sum, p: any) => sum + Number(p.amount),
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+    const nextMonthStart = new Date(monthStart);
+    nextMonthStart.setMonth(nextMonthStart.getMonth() + 1);
+    const monthlyReceipts = rentReceipts.filter((receipt) => {
+      const paidAt = new Date(receipt.paidAt);
+      return (
+        receipt.type === "RENT" &&
+        paidAt >= monthStart &&
+        paidAt < nextMonthStart
+      );
+    });
+    const monthlyRevenue = monthlyReceipts.reduce(
+      (sum, receipt) => sum + Number(receipt.amount),
       0,
     );
-    const outstandingPayments = payments.filter(
-      (p: any) => p.status === "PENDING" || p.status === "OVERDUE",
-    );
+    const outstandingPayments = payments.filter((p: any) => {
+      if (!["PENDING", "PARTIALLY_PAID", "OVERDUE"].includes(p.status)) return false;
+      const dueDate = new Date(p.dueDate);
+      const today = new Date();
+      dueDate.setHours(0, 0, 0, 0);
+      today.setHours(0, 0, 0, 0);
+      return dueDate <= today;
+    });
     const outstandingAmount = outstandingPayments.reduce(
-      (sum, p: any) => sum + Number(p.amount),
+      (sum, p: any) =>
+        sum +
+        Number(p.outstandingAmount ?? Number(p.amount) - Number(p.paidAmount || 0)),
       0,
     );
 
@@ -67,21 +94,21 @@ export default function DashboardPage() {
       monthlyRevenue,
       outstandingAmount,
       pendingMaintenance,
-      paidPayments,
+      paidPayments: monthlyReceipts,
       outstandingPayments,
     };
-  }, [properties, payments, requests]);
+  }, [properties, payments, requests, rentReceipts]);
 
-  // Memoize recent payments
+  // Memoize recent receipts
   const recentPayments = useMemo(() => {
-    return [...payments]
+    return [...rentReceipts]
       .sort(
-        (a: any, b: any) =>
-          new Date(b.paidDate || b.createdAt).getTime() -
-          new Date(a.paidDate || a.createdAt).getTime(),
+        (a, b) =>
+          new Date(b.paidAt).getTime() -
+          new Date(a.paidAt).getTime(),
       )
       .slice(0, 5);
-  }, [payments]);
+  }, [rentReceipts]);
 
   const handleNavigate = useCallback(
     (path: string) => {
@@ -145,7 +172,7 @@ export default function DashboardPage() {
                   UGX {stats.monthlyRevenue.toLocaleString()}
                 </div>
                 <p className="text-sm md:text-base text-slate-600 mb-4 md:mb-6">
-                  Total Revenue
+                  Rent received this month
                 </p>
                 <div className="grid grid-cols-2 gap-2 md:gap-4 max-w-md mx-auto">
                   <div className="p-3 md:p-4 bg-emerald-50 rounded-lg">
@@ -153,7 +180,7 @@ export default function DashboardPage() {
                       {stats.paidPayments.length}
                     </div>
                     <div className="text-xs md:text-sm text-slate-600">
-                      Paid
+                      Receipts
                     </div>
                   </div>
                   <div className="p-3 md:p-4 bg-amber-50 rounded-lg">
@@ -298,7 +325,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-2 md:space-y-3">
-              {recentPayments.map((payment: any) => (
+              {recentPayments.map((payment) => (
                 <div
                   key={payment.id}
                   className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border border-slate-200 rounded-lg gap-2"
@@ -316,10 +343,8 @@ export default function DashboardPage() {
                     <div className="text-sm md:text-base font-semibold text-slate-900">
                       UGX {Number(payment.amount).toLocaleString()}
                     </div>
-                    <div
-                      className={`text-xs ${payment.status === "PAID" ? "text-emerald-600" : "text-amber-600"}`}
-                    >
-                      {payment.status}
+                    <div className="text-xs text-emerald-600">
+                      {payment.type} receipt · {new Date(payment.paidAt).toLocaleDateString("en-UG")}
                     </div>
                   </div>
                 </div>

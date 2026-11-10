@@ -37,7 +37,9 @@ export function getPaymentStatus(payment: {
   status: string;
   dueDate: string | Date;
 }): string {
-  if (payment.status !== "PENDING") return payment.status;
+  if (payment.status === "PAID" || payment.status === "CANCELLED") {
+    return payment.status;
+  }
 
   const dueDate = new Date(payment.dueDate);
   if (Number.isNaN(dueDate.getTime())) return payment.status;
@@ -46,5 +48,7 @@ export function getPaymentStatus(payment: {
   today.setHours(0, 0, 0, 0);
   dueDate.setHours(0, 0, 0, 0);
 
-  return dueDate < today ? "OVERDUE" : payment.status;
+  if (dueDate < today) return "OVERDUE";
+  if (payment.status === "PARTIALLY_PAID") return payment.status;
+  return dueDate > today ? "UPCOMING" : payment.status;
 }

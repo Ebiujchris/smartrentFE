@@ -29,16 +29,32 @@ export default function TenantOverviewPage() {
   );
   const leaseForDisplay = currentLease ?? tenant?.leases?.[0];
   const leaseStatus = getLeaseStatus(leaseForDisplay);
+  const tenantPayments = payments.filter(
+    (payment) =>
+      payment.tenant?.id === tenant?.id &&
+      (!leaseForDisplay || (payment.leaseId || payment.lease?.id) === leaseForDisplay.id) &&
+      !["PAID", "CANCELLED"].includes(payment.status),
+  );
+  const duePayments = tenantPayments.filter((payment) => {
+    const dueDate = new Date(payment.dueDate);
+    const today = new Date();
+    dueDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    return dueDate <= today;
+  });
   const nextPayment = payments
-    .filter(
-      (payment) =>
-        payment.tenant?.id === tenant?.id &&
-        !["PAID", "CANCELLED"].includes(payment.status),
-    )
+    .filter((payment) => tenantPayments.includes(payment))
+    .filter((payment) => duePayments.length === 0 || duePayments.includes(payment))
     .sort(
       (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
     )[0];
   const paymentStatus = nextPayment ? getPaymentStatus(nextPayment) : null;
+  const nextPaymentBalance = nextPayment
+    ? Number(
+        nextPayment.outstandingAmount ??
+          Math.max(0, Number(nextPayment.amount) - Number(nextPayment.paidAmount || 0)),
+      )
+    : 0;
 
   return (
     <div className="space-y-4 sm:space-y-5 lg:space-y-6">
@@ -88,7 +104,7 @@ export default function TenantOverviewPage() {
               </p>
               <p className="text-base sm:text-lg lg:text-xl font-bold text-slate-900 truncate">
                 {nextPayment
-                  ? `UGX ${Number(nextPayment.amount).toLocaleString()}`
+                  ? `UGX ${nextPaymentBalance.toLocaleString()}`
                   : "No rent invoice"}
               </p>
               {nextPayment && (

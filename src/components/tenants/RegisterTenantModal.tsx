@@ -44,6 +44,12 @@ export default function RegisterTenantModal({
     rentAmount: unit.rentAmount,
     createAccount: true,
     deposit: unit.rentAmount, // Default deposit = 1 month rent
+    upfrontMonths: 3,
+    initialRentAmount: Number(unit.rentAmount) * 3,
+    initialPaymentMethod: "CASH",
+    initialPaidAt: new Date().toISOString().slice(0, 10),
+    depositReceived: 0,
+    depositPaymentMethod: "CASH",
   });
   const [successData, setSuccessData] = useState<{
     email: string;
@@ -57,6 +63,12 @@ export default function RegisterTenantModal({
       rentAmount: Number(unit.rentAmount),
       createAccount: true,
       deposit: Number(unit.rentAmount),
+      upfrontMonths: 3,
+      initialRentAmount: Number(unit.rentAmount) * 3,
+      initialPaymentMethod: "CASH",
+      initialPaidAt: new Date().toISOString().slice(0, 10),
+      depositReceived: 0,
+      depositPaymentMethod: "CASH",
     });
   }, [unit.id, unit.rentAmount]);
 
@@ -129,6 +141,12 @@ export default function RegisterTenantModal({
         rentAmount: unit.rentAmount,
         createAccount: true,
         deposit: unit.rentAmount,
+        upfrontMonths: 3,
+        initialRentAmount: Number(unit.rentAmount) * 3,
+        initialPaymentMethod: "CASH",
+        initialPaidAt: new Date().toISOString().slice(0, 10),
+        depositReceived: 0,
+        depositPaymentMethod: "CASH",
       });
       setSuccessData(null);
     }, 300);
@@ -320,12 +338,14 @@ export default function RegisterTenantModal({
                     id="rentAmount"
                     type="number"
                     value={formData.rentAmount || ""}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const rentAmount = Number(e.target.value);
                       setFormData({
                         ...formData,
-                        rentAmount: parseFloat(e.target.value),
-                      })
-                    }
+                        rentAmount,
+                        initialRentAmount: rentAmount * Number(formData.upfrontMonths || 0),
+                      });
+                    }}
                     required
                     className="mt-1"
                   />
@@ -347,6 +367,114 @@ export default function RegisterTenantModal({
                     className="mt-1"
                   />
                 </div>
+
+                <div>
+                  <Label htmlFor="upfrontMonths">Rent Months Required Upfront *</Label>
+                  <Input
+                    id="upfrontMonths"
+                    type="number"
+                    min="1"
+                    max="120"
+                    value={formData.upfrontMonths || ""}
+                    onChange={(e) => {
+                      const upfrontMonths = Number(e.target.value);
+                      setFormData({
+                        ...formData,
+                        upfrontMonths,
+                        initialRentAmount: Number(formData.rentAmount || 0) * upfrontMonths,
+                      });
+                    }}
+                    required
+                    className="mt-1"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="initialRentAmount">Initial Rent Received (UGX) *</Label>
+                  <Input
+                    id="initialRentAmount"
+                    type="number"
+                    min={Number(formData.rentAmount || 0) * Number(formData.upfrontMonths || 0)}
+                    step="0.01"
+                    value={formData.initialRentAmount || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, initialRentAmount: Number(e.target.value) })
+                    }
+                    required
+                    className="mt-1"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">
+                    Minimum UGX {(Number(formData.rentAmount || 0) * Number(formData.upfrontMonths || 0)).toLocaleString()} for the selected advance.
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="initialPaymentMethod">Advance Rent Payment Method *</Label>
+                  <select
+                    id="initialPaymentMethod"
+                    value={formData.initialPaymentMethod || "CASH"}
+                    onChange={(e) =>
+                      setFormData({ ...formData, initialPaymentMethod: e.target.value })
+                    }
+                    className="mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-3"
+                    required
+                  >
+                    <option value="CASH">Cash</option>
+                    <option value="BANK_TRANSFER">Bank transfer</option>
+                    <option value="MTN_MOBILE_MONEY">MTN Mobile Money</option>
+                    <option value="AIRTEL_MONEY">Airtel Money</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <Label htmlFor="initialPaidAt">Advance Received Date *</Label>
+                  <Input
+                    id="initialPaidAt"
+                    type="date"
+                    value={formData.initialPaidAt || ""}
+                    onChange={(e) => setFormData({ ...formData, initialPaidAt: e.target.value })}
+                    required
+                    className="mt-1"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="depositReceived">Security Deposit Received (UGX)</Label>
+                  <Input
+                    id="depositReceived"
+                    type="number"
+                    min="0"
+                    max={Number(formData.deposit || 0)}
+                    step="0.01"
+                    value={formData.depositReceived ?? 0}
+                    onChange={(e) =>
+                      setFormData({ ...formData, depositReceived: Number(e.target.value) })
+                    }
+                    className="mt-1"
+                  />
+                </div>
+
+                {Number(formData.depositReceived || 0) > 0 && (
+                  <div>
+                    <Label htmlFor="depositPaymentMethod">Deposit Payment Method *</Label>
+                    <select
+                      id="depositPaymentMethod"
+                      value={formData.depositPaymentMethod || "CASH"}
+                      onChange={(e) =>
+                        setFormData({ ...formData, depositPaymentMethod: e.target.value })
+                      }
+                      className="mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-3"
+                      required
+                    >
+                      <option value="CASH">Cash</option>
+                      <option value="BANK_TRANSFER">Bank transfer</option>
+                      <option value="MTN_MOBILE_MONEY">MTN Mobile Money</option>
+                      <option value="AIRTEL_MONEY">Airtel Money</option>
+                      <option value="OTHER">Other</option>
+                    </select>
+                  </div>
+                )}
 
                 <div className="col-span-2">
                   <Label htmlFor="paymentDueDay">Payment Due Day (1-31)</Label>
@@ -445,6 +573,16 @@ export default function RegisterTenantModal({
                   <span className="text-slate-600">Monthly Rent:</span>
                   <span className="font-medium">
                     UGX {formData.rentAmount?.toLocaleString()}
+                  </span>
+
+                  <span className="text-slate-600">Advance Paid:</span>
+                  <span className="font-medium">
+                    {formData.upfrontMonths} months · UGX {Number(formData.initialRentAmount || 0).toLocaleString()}
+                  </span>
+
+                  <span className="text-slate-600">Security Deposit Received:</span>
+                  <span className="font-medium">
+                    UGX {Number(formData.depositReceived || 0).toLocaleString()} / UGX {Number(formData.deposit || 0).toLocaleString()}
                   </span>
 
                   <span className="text-slate-600">Agreement Period:</span>

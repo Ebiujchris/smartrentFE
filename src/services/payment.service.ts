@@ -20,6 +20,38 @@ export interface UpdatePaymentDto {
   notes?: string;
 }
 
+export interface RecordRentReceiptDto {
+  leaseId: string;
+  amount: number;
+  method: string;
+  type?: "RENT" | "DEPOSIT";
+  paidAt?: string;
+  reference?: string;
+  notes?: string;
+}
+
+export interface RentReceipt {
+  id: string;
+  amount: number | string;
+  paidAt: string;
+  type: "RENT" | "DEPOSIT";
+  tenant: {
+    id: string;
+    user: {
+      fullName: string;
+    };
+  };
+  lease: {
+    id: string;
+    unit: {
+      unitNumber: string;
+      property: {
+        name: string;
+      };
+    };
+  };
+}
+
 export const paymentService = {
   async createPayment(data: CreatePaymentDto) {
     const response = await api.post("/payments", data);
@@ -38,6 +70,16 @@ export const paymentService = {
 
   async getOverduePayments() {
     const response = await api.get("/payments/overdue");
+    return response.data;
+  },
+
+  async getRentReceipts() {
+    const response = await api.get("/payments/receipts");
+    return response.data;
+  },
+
+  async recordRentReceipt(data: RecordRentReceiptDto) {
+    const response = await api.post("/payments/receipts", data);
     return response.data;
   },
 

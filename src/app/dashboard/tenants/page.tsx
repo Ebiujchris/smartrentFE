@@ -55,6 +55,10 @@ interface TenantPayment {
   status: string;
   dueDate: string;
   amount: number;
+  paidAmount?: number;
+  outstandingAmount?: number;
+  periodStart?: string | null;
+  periodEnd?: string | null;
 }
 
 interface TenantItem extends Tenant {
@@ -161,7 +165,7 @@ export default function TenantsPage() {
   const [isEndingTenancy, setIsEndingTenancy] = useState(false);
 
   // Payment management state
-  const { payments, fetchPayments, recordPayment, createPayment } =
+  const { payments, fetchPayments, recordRentReceipt, createPayment } =
     usePaymentStore();
   const [isMarkPaidOpen, setIsMarkPaidOpen] = useState(false);
   const [selectedTenantForPayment, setSelectedTenantForPayment] =
@@ -177,6 +181,7 @@ export default function TenantsPage() {
     reference: "",
     notes: "",
   });
+  const [receiptType, setReceiptType] = useState<"RENT" | "DEPOSIT">("RENT");
 
   useEffect(() => {
     fetchTenants();
@@ -332,23 +337,30 @@ export default function TenantsPage() {
     }
   };
 
-  // Keep the next charge actionable while showing the tenant's total balance.
-  const getNextUnpaidPayment = (tenantId: string) => {
+  // Prioritize balances already due; otherwise show the next scheduled charge.
+  const getNextUnpaidPayment = (tenantId: string, leaseId?: string) => {
     const tenantPayments = (payments as TenantPayment[]).filter(
       (payment) =>
         payment.tenant?.id === tenantId &&
+        (!leaseId || (payment.leaseId || payment.lease?.id) === leaseId) &&
         !["PAID", "CANCELLED"].includes(payment.status),
     );
 
     if (tenantPayments.length === 0) return null;
 
-    // Sort by due date and get the earliest
-    const nextPayment = tenantPayments.sort(
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const duePayments = tenantPayments.filter((payment) => {
+      const dueDate = new Date(payment.dueDate);
+      dueDate.setHours(0, 0, 0, 0);
+      return dueDate <= today;
+    });
+    const nextPayment = [...(duePayments.length ? duePayments : tenantPayments)].sort(
       (a, b) =>
         new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
     )[0];
 
-    const statuses = tenantPayments.map(getPaymentStatus);
+    const statuses = duePayments.map(getPaymentStatus);
     const status = statuses.includes("OVERDUE")
       ? "OVERDUE"
       : getPaymentStatus(nextPayment);
@@ -356,12 +368,51 @@ export default function TenantsPage() {
     return {
       ...nextPayment,
       status,
-      outstandingCount: tenantPayments.length,
-      outstandingTotal: tenantPayments.reduce(
-        (total, payment) => total + Number(payment.amount || 0),
+      isDue: duePayments.length > 0,
+      outstandingCount: duePayments.length,
+      outstandingTotal: duePayments.reduce(
+        (total, payment) =>
+          total +
+          Number(
+            payment.outstandingAmount ??
+              Math.max(
+                0,
+                Number(payment.amount || 0) - Number(payment.paidAmount || 0),
+              ),
+          ),
         0,
       ),
     };
+  };
+
+  const getPaidThroughDate = (leaseId?: string) => {
+    if (!leaseId) return null;
+    const leaseCharges = (payments as TenantPayment[])
+      .filter((payment) => (payment.leaseId || payment.lease?.id) === leaseId)
+      .sort(
+        (a, b) =>
+          new Date(a.periodStart || a.dueDate).getTime() -
+          new Date(b.periodStart || b.dueDate).getTime(),
+      );
+
+    let paidThrough: string | null = null;
+    for (const charge of leaseCharges) {
+      if (charge.status === "CANCELLED") continue;
+      const paid = Number(
+        charge.paidAmount ?? (charge.status === "PAID" ? charge.amount : 0),
+      );
+      if (paid < Number(charge.amount)) break;
+      paidThrough = charge.periodEnd || charge.dueDate;
+    }
+    return paidThrough;
+  };
+
+  const getDepositRemaining = (lease?: TenantLeaseInfo) => {
+    if (!lease) return 0;
+    const paid = (lease.rentReceipts || [])
+      .filter((receipt) => receipt.type === "DEPOSIT")
+      .reduce((total, receipt) => total + Number(receipt.amount), 0);
+    return Math.max(0, Number(lease.deposit) - paid);
   };
 
   const getNoRentLabel = (tenantId: string, leaseId?: string) => {
@@ -378,6 +429,8 @@ export default function TenantsPage() {
   const getRentStatusLabel = (payment: TenantPayment) => {
     const status = getPaymentStatus(payment);
     if (status === "OVERDUE") return "Overdue";
+    if (status === "PARTIALLY_PAID") return "Partially paid";
+    if (status === "UPCOMING") return "Upcoming";
 
     const dueDate = new Date(payment.dueDate);
     const today = new Date();
@@ -389,7 +442,18 @@ export default function TenantsPage() {
   // Handle marking existing payment as paid
   const handleMarkAsPaid = (payment: TenantPayment) => {
     setSelectedPayment(payment);
+    setReceiptType("RENT");
     setIsCreatingNew(false);
+    setRecordData({
+      amount: String(
+        payment.outstandingAmount ??
+          Math.max(0, Number(payment.amount) - Number(payment.paidAmount || 0)),
+      ),
+      dueDate: "",
+      method: "CASH",
+      reference: "",
+      notes: "",
+    });
     setIsMarkPaidOpen(true);
   };
 
@@ -406,10 +470,43 @@ export default function TenantsPage() {
 
     setSelectedTenantForPayment(tenant);
     setSelectedPayment(null);
+    setReceiptType("RENT");
     setIsCreatingNew(true);
     setRecordData({
       amount: String(Number(lease.rentAmount)),
       dueDate: getSuggestedDueDate(lease),
+      method: "CASH",
+      reference: "",
+      notes: "",
+    });
+    setIsMarkPaidOpen(true);
+  };
+
+  const handleRecordDeposit = (tenant: TenantItem) => {
+    const lease = tenant.leases?.find((item) => item.isActive);
+    if (!lease) return;
+
+    const depositPaid = (lease.rentReceipts || [])
+      .filter((receipt) => receipt.type === "DEPOSIT")
+      .reduce((total, receipt) => total + Number(receipt.amount), 0);
+    const depositRemaining = Math.max(0, Number(lease.deposit) - depositPaid);
+    if (depositRemaining <= 0) {
+      toast.info("The security deposit has been paid in full");
+      return;
+    }
+
+    setSelectedTenantForPayment(tenant);
+    setSelectedPayment({
+      leaseId: lease.id,
+      amount: depositRemaining,
+      paidAmount: 0,
+      outstandingAmount: depositRemaining,
+    });
+    setReceiptType("DEPOSIT");
+    setIsCreatingNew(false);
+    setRecordData({
+      amount: String(depositRemaining),
+      dueDate: "",
       method: "CASH",
       reference: "",
       notes: "",
@@ -455,17 +552,26 @@ export default function TenantsPage() {
           description: `UGX ${Number(recordData.amount).toLocaleString()} is due ${recordData.dueDate} for ${selectedTenantForPayment.user.fullName}.`,
         });
       } else {
-        // Marking existing payment as paid
         if (!selectedPayment) return;
+        const amount = Number(recordData.amount);
+        const leaseId = selectedPayment.leaseId || selectedPayment.lease?.id;
+        if (!leaseId || !Number.isFinite(amount) || amount <= 0) {
+          toast.error("Enter a valid rent payment amount");
+          return;
+        }
 
-        updatedPayment = await recordPayment(
-          selectedPayment.id,
-          recordData.method,
-          recordData.reference,
-          combinedNotes,
-        );
-        toast.success("Payment marked as paid!", {
-          description: `UGX ${Number(selectedPayment.amount).toLocaleString()} has been recorded.`,
+        updatedPayment = await recordRentReceipt({
+          leaseId,
+          amount,
+          method: recordData.method,
+          type: receiptType,
+          reference: recordData.reference || undefined,
+          notes: combinedNotes,
+        });
+        toast.success(receiptType === "DEPOSIT" ? "Security deposit recorded" : "Rent payment recorded", {
+          description: receiptType === "DEPOSIT"
+            ? `UGX ${amount.toLocaleString()} recorded separately from rent.`
+            : `UGX ${amount.toLocaleString()} was applied to the earliest rent due.`,
         });
       }
 
@@ -478,7 +584,10 @@ export default function TenantsPage() {
       // Refresh the ledger after adding a due date or recording a receipt.
       await fetchPayments();
       if (updatedPayment) {
-        setReceiptPayment(updatedPayment);
+        setReceiptPayment({
+          ...updatedPayment,
+          paidDate: updatedPayment.paidAt || updatedPayment.paidDate,
+        });
         setShowReceipt(true);
       }
     } catch (error) {
@@ -500,6 +609,7 @@ export default function TenantsPage() {
       PAID: "bg-emerald-100 text-emerald-700",
       PENDING: "bg-yellow-100 text-yellow-700",
       OVERDUE: "bg-red-100 text-red-700",
+      PARTIALLY_PAID: "bg-amber-100 text-amber-800",
       CANCELLED: "bg-slate-100 text-slate-700",
     };
     return styles[status as keyof typeof styles] || styles.PENDING;
@@ -513,6 +623,8 @@ export default function TenantsPage() {
         return <Clock className="h-4 w-4" />;
       case "OVERDUE":
         return <AlertCircle className="h-4 w-4" />;
+      case "PARTIALLY_PAID":
+        return <Clock className="h-4 w-4" />;
       default:
         return <Clock className="h-4 w-4" />;
     }
@@ -942,7 +1054,9 @@ export default function TenantsPage() {
                       const leaseStatus = getLeaseStatus(displayedLease);
                       const propertyName = displayedLease?.unit.property.name ?? "—";
                       const unitNumber = displayedLease?.unit.unitNumber ?? "—";
-                      const nextPayment = getNextUnpaidPayment(tenant.id);
+                      const nextPayment = getNextUnpaidPayment(tenant.id, displayedLease?.id);
+                      const paidThrough = getPaidThroughDate(displayedLease?.id);
+                      const depositRemaining = getDepositRemaining(displayedLease);
 
                       return (
                         <tr
@@ -990,14 +1104,27 @@ export default function TenantsPage() {
                                   {getRentStatusLabel(nextPayment)}
                                 </span>
                                 <span className="text-xs text-slate-500">
-                                  UGX {Number(nextPayment.outstandingTotal).toLocaleString()} outstanding
-                                  {nextPayment.outstandingCount > 1 ? ` · ${nextPayment.outstandingCount} items` : ` · Due ${new Date(nextPayment.dueDate).toLocaleDateString("en-UG")}`}
+                                  {nextPayment.isDue
+                                    ? `UGX ${Number(nextPayment.outstandingTotal).toLocaleString()} outstanding${nextPayment.outstandingCount > 1 ? ` · ${nextPayment.outstandingCount} items` : ""}`
+                                    : `UGX ${Number(nextPayment.outstandingAmount ?? nextPayment.amount).toLocaleString()} due ${new Date(nextPayment.dueDate).toLocaleDateString("en-UG")}`}
                                 </span>
+                                {paidThrough && (
+                                  <span className="block text-xs text-emerald-700">
+                                    Paid through {new Date(paidThrough).toLocaleDateString("en-UG")}
+                                  </span>
+                                )}
                               </div>
                             ) : (
-                              <span className="text-xs text-slate-500">
-                                {getNoRentLabel(tenant.id, displayedLease?.id)}
-                              </span>
+                              <div>
+                                <span className="text-xs text-slate-500">
+                                  {getNoRentLabel(tenant.id, displayedLease?.id)}
+                                </span>
+                                {paidThrough && (
+                                  <span className="block text-xs text-emerald-700">
+                                    Paid through {new Date(paidThrough).toLocaleDateString("en-UG")}
+                                  </span>
+                                )}
+                              </div>
                             )}
                           </td>
                           <td className="px-3 md:px-6 py-3 md:py-4">
@@ -1039,6 +1166,27 @@ export default function TenantsPage() {
                                   End tenancy
                                 </Button>
                               )}
+                              {displayedLease?.isActive && depositRemaining > 0 && (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  className="w-full"
+                                  onClick={() => handleRecordDeposit(tenant)}
+                                >
+                                  Record security deposit
+                                </Button>
+                              )}
+                              {displayedLease?.isActive && depositRemaining > 0 && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs w-full md:w-auto"
+                                  onClick={() => handleRecordDeposit(tenant)}
+                                >
+                                  Record deposit
+                                </Button>
+                              )}
                               <Button
                                 type="button"
                                 size="sm"
@@ -1066,7 +1214,9 @@ export default function TenantsPage() {
                 const unitNumber = displayedLease?.unit.unitNumber;
                 const propertyName = displayedLease?.unit.property.name;
                 const propertyAddress = displayedLease?.unit.property.address;
-                const nextPayment = getNextUnpaidPayment(tenant.id);
+                const nextPayment = getNextUnpaidPayment(tenant.id, displayedLease?.id);
+                const paidThrough = getPaidThroughDate(displayedLease?.id);
+                const depositRemaining = getDepositRemaining(displayedLease);
 
                 return (
                   <div
@@ -1122,6 +1272,12 @@ export default function TenantsPage() {
                       )}
                     </div>
 
+                    {displayedLease && (
+                      <p className="mt-2 text-xs text-slate-600">
+                        Security deposit received: UGX {(Number(displayedLease.deposit) - depositRemaining).toLocaleString()} / UGX {Number(displayedLease.deposit).toLocaleString()}
+                      </p>
+                    )}
+
                     {/* Rent status */}
                     {nextPayment ? (
                       <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
@@ -1139,15 +1295,27 @@ export default function TenantsPage() {
                           </span>
                         </div>
                         <div className="text-sm font-semibold text-slate-900">
-                          UGX {Number(nextPayment.outstandingTotal).toLocaleString()} outstanding
+                          {nextPayment.isDue
+                            ? `UGX ${Number(nextPayment.outstandingTotal).toLocaleString()} outstanding`
+                            : `Next rent: UGX ${Number(nextPayment.outstandingAmount ?? nextPayment.amount).toLocaleString()}`}
                         </div>
                         <p className="mt-1 text-xs text-slate-500">
                           Next due {new Date(nextPayment.dueDate).toLocaleDateString("en-UG")}
                         </p>
+                        {paidThrough && (
+                          <p className="mt-1 text-xs text-emerald-700">
+                            Paid through {new Date(paidThrough).toLocaleDateString("en-UG")}
+                          </p>
+                        )}
                       </div>
                     ) : (
                       <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
                         {getNoRentLabel(tenant.id, displayedLease?.id)}
+                        {paidThrough && (
+                          <p className="mt-1 text-emerald-700">
+                            Paid through {new Date(paidThrough).toLocaleDateString("en-UG")}
+                          </p>
+                        )}
                       </div>
                     )}
 
@@ -1207,34 +1375,44 @@ export default function TenantsPage() {
         <DialogContent className="max-w-full sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {isCreatingNew ? "Schedule Rent Due" : "Record Rent Payment"}
+              {isCreatingNew
+                ? "Schedule Rent Due"
+                : receiptType === "DEPOSIT"
+                  ? "Record Security Deposit"
+                  : "Record Rent Payment"}
             </DialogTitle>
             <DialogDescription>
               {isCreatingNew
                 ? "Add a rent charge with its due date. It will remain outstanding until recorded as received."
-                : "Record money received against this rent charge."}
+                : receiptType === "DEPOSIT"
+                  ? "Record a security-deposit receipt separately from rent."
+                  : "Record rent received. It is applied to the earliest rent period first; any extra is kept as rent credit."}
             </DialogDescription>
           </DialogHeader>
           {(selectedPayment || isCreatingNew) && (
             <form onSubmit={handleRecordPayment} className="space-y-4 pb-2">
               <div className="space-y-2">
                 <Label>Amount</Label>
-                {isCreatingNew ? (
-                  <Input
-                    type="number"
-                    placeholder="Enter amount in UGX"
-                    value={recordData.amount}
-                    onChange={(e) =>
-                      setRecordData({ ...recordData, amount: e.target.value })
-                    }
-                    required
-                  />
-                ) : (
-                  <Input
-                    value={`UGX ${Number(selectedPayment.amount).toLocaleString()}`}
-                    disabled
-                    className="bg-slate-50"
-                  />
+                <Input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  placeholder="Enter amount in UGX"
+                  value={recordData.amount}
+                  onChange={(e) =>
+                    setRecordData({ ...recordData, amount: e.target.value })
+                  }
+                  required
+                />
+                {!isCreatingNew && selectedPayment && receiptType === "RENT" && (
+                  <p className="text-xs text-slate-500">
+                    Remaining on this charge: UGX {Number(selectedPayment.outstandingAmount ?? Number(selectedPayment.amount) - Number(selectedPayment.paidAmount || 0)).toLocaleString()}. Extra rent is held as credit.
+                  </p>
+                )}
+                {!isCreatingNew && selectedPayment && receiptType === "DEPOSIT" && (
+                  <p className="text-xs text-slate-500">
+                    Security deposits are not applied to rent.
+                  </p>
                 )}
               </div>
               {isCreatingNew && (
@@ -1277,7 +1455,7 @@ export default function TenantsPage() {
                           MTN Mobile Money
                         </SelectItem>
                         <SelectItem value="AIRTEL_MONEY">Airtel Money</SelectItem>
-                        <SelectItem value="CHECK">Check</SelectItem>
+                        <SelectItem value="OTHER">Other</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

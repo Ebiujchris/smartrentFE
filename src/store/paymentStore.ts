@@ -3,6 +3,7 @@ import {
   paymentService,
   CreatePaymentDto,
   UpdatePaymentDto,
+  RecordRentReceiptDto,
 } from "@/services/payment.service";
 
 interface PaymentStore {
@@ -19,6 +20,7 @@ interface PaymentStore {
     reference?: string,
     notes?: string,
   ) => Promise<any>;
+  recordRentReceipt: (data: RecordRentReceiptDto) => Promise<any>;
   deletePayment: (id: string) => Promise<void>;
   reset: () => void; // Add reset method for security
 }
@@ -112,6 +114,18 @@ export const usePaymentStore = create<PaymentStore>((set, get) => ({
         loading: false,
       }));
       return updated;
+    } catch (error: any) {
+      set({ error: error.message, loading: false });
+      throw error;
+    }
+  },
+
+  recordRentReceipt: async (data: RecordRentReceiptDto) => {
+    set({ loading: true, error: null });
+    try {
+      const receipt = await paymentService.recordRentReceipt(data);
+      await get().fetchPayments();
+      return receipt;
     } catch (error: any) {
       set({ error: error.message, loading: false });
       throw error;

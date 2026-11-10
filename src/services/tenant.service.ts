@@ -6,6 +6,8 @@ export interface TenantLeaseInfo {
   startDate: string;
   endDate: string;
   rentAmount: number | string;
+  deposit: number | string;
+  upfrontMonths?: number;
   unit: {
     id: string;
     unitNumber: string;
@@ -15,6 +17,15 @@ export interface TenantLeaseInfo {
       address: string;
     };
   };
+  rentReceipts?: Array<{
+    id: string;
+    type: "RENT" | "DEPOSIT";
+    amount: number | string;
+    paidAt: string;
+    method: string;
+    reference?: string | null;
+    unallocatedAmount?: number | string;
+  }>;
 }
 
 export interface Tenant {

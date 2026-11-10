@@ -54,6 +54,8 @@ function paymentStatusColor(status: string) {
       return "bg-emerald-100 text-emerald-700";
     case "PENDING":
       return "bg-yellow-100 text-yellow-700";
+    case "PARTIALLY_PAID":
+      return "bg-amber-100 text-amber-800";
     case "OVERDUE":
       return "bg-red-100 text-red-700";
     default:
