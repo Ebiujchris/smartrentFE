@@ -138,16 +138,16 @@ export default function LandingPage() {
 
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative overflow-hidden bg-slate-900 pt-24 pb-32 text-center lg:pt-36 lg:pb-40">
+        <section className="relative overflow-hidden bg-slate-900 pt-16 pb-24 text-center lg:pt-24 lg:pb-28">
           <div className="absolute inset-0 bg-[url('/dashboard_mockup.png')] bg-cover bg-center opacity-5 blur-sm mix-blend-overlay"></div>
           <div className="container mx-auto px-4 md:px-8 relative z-10">
             <h1 className="mx-auto max-w-4xl font-display text-4xl font-bold tracking-tight text-white sm:text-6xl">
               Property management <span className="text-emerald-400">made simple</span>
             </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-lg tracking-tight text-slate-300">
+            <p className="mx-auto mt-4 max-w-2xl text-lg tracking-tight text-slate-300">
               Track rent, manage tenants, and collect payments—all in one place. Built for Ugandan landlords.
             </p>
-            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
+            <div className="mt-7 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
               <Button asChild size="lg" className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-600 text-white rounded-full h-12 px-8 text-base shadow-lg shadow-emerald-500/20">
                 <Link href="/register">Start Free Trial <ArrowRight className="ml-2 h-4 w-4" /></Link>
               </Button>
@@ -159,7 +159,7 @@ export default function LandingPage() {
         </section>
 
         {/* Dashboard Preview */}
-        <section className="relative -mt-16 sm:-mt-24 z-20 pb-16">
+        <section className="relative -mt-12 sm:-mt-16 z-20 pb-10">
           <div className="container mx-auto px-4 md:px-8 max-w-5xl">
             <div className="rounded-xl bg-white/5 p-2 ring-1 ring-white/10 backdrop-blur lg:rounded-2xl lg:p-4 shadow-2xl">
               <div className="overflow-hidden rounded-lg bg-white ring-1 ring-slate-900/5 shadow-sm">
@@ -177,16 +177,16 @@ export default function LandingPage() {
         </section>
 
         {/* Features */}
-        <section id="features" className="py-24 bg-white sm:py-32">
+        <section id="features" className="py-16 bg-white sm:py-20">
           <div className="container mx-auto px-4 md:px-8">
             <div className="mx-auto max-w-2xl text-center">
               <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Everything you need</h2>
-              <p className="mt-6 text-lg leading-8 text-slate-600">
+              <p className="mt-3 text-lg leading-8 text-slate-600">
                 Powerful tools to run your rental business efficiently.
               </p>
             </div>
-            <div className="mx-auto mt-16 max-w-5xl sm:mt-20 lg:mt-24">
-              <dl className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-10 lg:max-w-none lg:grid-cols-3 lg:gap-y-16">
+            <div className="mx-auto mt-10 max-w-5xl sm:mt-12 lg:mt-14">
+              <dl className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-8 lg:max-w-none lg:grid-cols-3 lg:gap-y-12">
                 {[
                   {
                     name: 'Rent Tracking',
@@ -220,28 +220,28 @@ export default function LandingPage() {
         </section>
 
         {/* How it Works */}
-        <section className="py-24 bg-slate-50 sm:py-32 border-t border-slate-200">
+        <section className="py-16 bg-slate-50 sm:py-20 border-t border-slate-200">
           <div className="container mx-auto px-4 md:px-8">
              <div className="mx-auto max-w-2xl text-center">
               <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Get started in 3 steps</h2>
             </div>
-            <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6">
               <Card className="bg-white border-0 shadow-md">
-                <CardContent className="pt-8 text-center">
+                <CardContent className="pt-6 text-center">
                   <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-900 text-white font-bold text-xl mb-4">1</div>
                   <h3 className="text-xl font-semibold text-slate-900 mb-2">Add Properties</h3>
                   <p className="text-slate-600">Set up buildings and units in minutes.</p>
                 </CardContent>
               </Card>
               <Card className="bg-white border-0 shadow-md">
-                <CardContent className="pt-8 text-center">
+                <CardContent className="pt-6 text-center">
                   <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-900 text-white font-bold text-xl mb-4">2</div>
                   <h3 className="text-xl font-semibold text-slate-900 mb-2">Add Tenants</h3>
                   <p className="text-slate-600">Register tenants and set rent amounts.</p>
                 </CardContent>
               </Card>
               <Card className="bg-white border-0 shadow-md">
-                <CardContent className="pt-8 text-center">
+                <CardContent className="pt-6 text-center">
                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 text-white font-bold text-xl mb-4">3</div>
                   <h3 className="text-xl font-semibold text-slate-900 mb-2">Collect Rent</h3>
                   <p className="text-slate-600">Track payments via cash or Mobile Money.</p>
@@ -252,9 +252,9 @@ export default function LandingPage() {
         </section>
 
         {/* Tenant Marketing Section */}
-        <section className="py-24 bg-white sm:py-32 border-t border-slate-200">
+        <section className="py-16 bg-white sm:py-20 border-t border-slate-200">
           <div className="container mx-auto px-4 md:px-8">
-            <div className="mx-auto max-w-7xl flex flex-col-reverse lg:flex-row items-center gap-12 lg:gap-24">
+            <div className="mx-auto max-w-7xl flex flex-col-reverse lg:flex-row items-center gap-8 lg:gap-12">
               <div className="w-full lg:w-1/2">
                 <div className="relative rounded-2xl bg-slate-50 p-2 ring-1 ring-slate-100 shadow-xl overflow-hidden aspect-[4/3]">
                   <div className="absolute inset-0 bg-emerald-500/10 mix-blend-multiply rounded-xl z-10" />
@@ -270,13 +270,13 @@ export default function LandingPage() {
                 </div>
               </div>
               <div className="w-full lg:w-1/2">
-                <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl mb-6">
+                <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl mb-4">
                   Looking for a place?
                 </h2>
-                <p className="text-lg text-slate-600 mb-8 leading-relaxed">
+                <p className="text-lg text-slate-600 mb-6 leading-relaxed">
                   Find your next home directly from verified landlords. No middlemen, no hidden fees.
                 </p>
-                <ul className="space-y-4 mb-10">
+                <ul className="space-y-3 mb-7">
                   {['No agency fees', 'Direct landlord contact', 'Real-time availability'].map((item, i) => (
                     <li key={i} className="flex items-start gap-3">
                       <CheckCircle2 className="h-6 w-6 text-emerald-500 flex-shrink-0" />
@@ -293,10 +293,10 @@ export default function LandingPage() {
         </section>
 
         {/* CTA */}
-        <section className="py-24 bg-slate-900 sm:py-32">
+        <section className="py-16 bg-slate-900 sm:py-20">
           <div className="container mx-auto px-4 md:px-8 text-center">
-             <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl mb-6">Ready to get started?</h2>
-             <p className="text-slate-300 text-lg mb-8 max-w-2xl mx-auto">Join hundreds of landlords managing their properties smarter.</p>
+             <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl mb-4">Ready to get started?</h2>
+             <p className="text-slate-300 text-lg mb-6 max-w-2xl mx-auto">Join hundreds of landlords managing their properties smarter.</p>
              <Button asChild size="lg" className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-600 text-white rounded-full h-12 px-8 text-base">
                 <Link href="/register">Start Free Trial</Link>
               </Button>
@@ -305,7 +305,7 @@ export default function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white py-10 border-t border-slate-200">
+      <footer className="bg-white py-8 border-t border-slate-200">
         <div className="container mx-auto px-4 md:px-8 text-center">
           <p className="text-slate-500 text-sm mb-2">
             &copy; {new Date().getFullYear()} SmartRentUG. All rights reserved.
