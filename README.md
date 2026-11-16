@@ -20,6 +20,21 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Production API configuration
+
+Set `NEXT_PUBLIC_API_URL` to the deployed backend's base URL in the hosting
+environment **before** building the frontend. Next.js embeds `NEXT_PUBLIC_*`
+values into the client bundle at build time, so changing the environment after
+the build requires a new build and redeployment.
+
+For local development, `.env.local` can use `NEXT_PUBLIC_API_URL=http://localhost:3001`.
+Production builds reject a missing API URL or a localhost URL instead of silently
+shipping a frontend that calls the visitor's own computer.
+
+On Hostinger, configure the variable in the Node.js application's build
+environment, rebuild the application, and restart/redeploy it. Do not copy a
+bundle that was built with the local `.env.local` value.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
