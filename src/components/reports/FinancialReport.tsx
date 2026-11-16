@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 
 const STATUS_COLORS = {
   PAID: '#10B981',
+  PARTIALLY_PAID: '#6366F1',
   PENDING: '#F59E0B',
   OVERDUE: '#EF4444',
 };
@@ -56,6 +57,8 @@ export default function FinancialReport() {
       Property: p.property,
       Unit: p.unit,
       Amount: p.amount,
+      Paid: p.paidAmount,
+      Outstanding: p.outstandingAmount,
       Status: p.status,
     }));
     
@@ -66,7 +69,7 @@ export default function FinancialReport() {
   const handleExportPDF = () => {
     if (!data) return;
     
-    const headers = ['Due Date', 'Paid Date', 'Tenant', 'Property', 'Unit', 'Amount', 'Status'];
+    const headers = ['Due Date', 'Paid Date', 'Tenant', 'Property', 'Unit', 'Amount', 'Paid', 'Outstanding', 'Status'];
     const pdfData = data.payments.map(p => [
       formatDate(p.dueDate),
       p.paidDate ? formatDate(p.paidDate) : '-',
@@ -74,6 +77,8 @@ export default function FinancialReport() {
       p.property,
       p.unit,
       formatCurrency(p.amount),
+      formatCurrency(p.paidAmount),
+      formatCurrency(p.outstandingAmount),
       p.status,
     ]);
     
@@ -105,6 +110,7 @@ export default function FinancialReport() {
 
   const statusData = [
     { name: 'Paid', value: data.payments.filter(payment => payment.status === 'PAID').length, color: STATUS_COLORS.PAID },
+    { name: 'Partially paid', value: data.payments.filter(payment => payment.status === 'PARTIALLY_PAID').length, color: STATUS_COLORS.PARTIALLY_PAID },
     { name: 'Pending', value: data.payments.filter(payment => payment.status === 'PENDING').length, color: STATUS_COLORS.PENDING },
     { name: 'Overdue', value: data.payments.filter(payment => payment.status === 'OVERDUE').length, color: STATUS_COLORS.OVERDUE },
   ];
@@ -120,9 +126,9 @@ export default function FinancialReport() {
 
     return {
       month: monthDate.toLocaleDateString('en', { month: 'short' }),
-      PAID: payments.filter(payment => payment.status === 'PAID').reduce((total, payment) => total + payment.amount, 0),
-      PENDING: payments.filter(payment => payment.status === 'PENDING').reduce((total, payment) => total + payment.amount, 0),
-      OVERDUE: payments.filter(payment => payment.status === 'OVERDUE').reduce((total, payment) => total + payment.amount, 0),
+      PAID: payments.reduce((total, payment) => total + payment.paidAmount, 0),
+      PENDING: payments.filter(payment => ['PENDING', 'PARTIALLY_PAID'].includes(payment.status)).reduce((total, payment) => total + payment.outstandingAmount, 0),
+      OVERDUE: payments.filter(payment => payment.status === 'OVERDUE').reduce((total, payment) => total + payment.outstandingAmount, 0),
     };
   });
 
@@ -303,7 +309,9 @@ export default function FinancialReport() {
                   <th className="text-left p-3 text-sm font-semibold text-slate-700">Tenant</th>
                   <th className="text-left p-3 text-sm font-semibold text-slate-700">Property</th>
                   <th className="text-left p-3 text-sm font-semibold text-slate-700">Unit</th>
-                  <th className="text-right p-3 text-sm font-semibold text-slate-700">Amount</th>
+                  <th className="text-right p-3 text-sm font-semibold text-slate-700">Due</th>
+                  <th className="text-right p-3 text-sm font-semibold text-slate-700">Paid</th>
+                  <th className="text-right p-3 text-sm font-semibold text-slate-700">Balance</th>
                   <th className="text-center p-3 text-sm font-semibold text-slate-700">Status</th>
                 </tr>
               </thead>
@@ -317,11 +325,19 @@ export default function FinancialReport() {
                     <td className="p-3 text-sm text-right font-medium">
                       {formatCurrency(payment.amount)}
                     </td>
+                    <td className="p-3 text-sm text-right">
+                      {formatCurrency(payment.paidAmount)}
+                    </td>
+                    <td className="p-3 text-sm text-right">
+                      {formatCurrency(payment.outstandingAmount)}
+                    </td>
                     <td className="p-3 text-center">
                       <span
                         className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
                           payment.status === 'PAID'
                             ? 'bg-green-100 text-green-700'
+                            : payment.status === 'PARTIALLY_PAID'
+                            ? 'bg-indigo-100 text-indigo-700'
                             : payment.status === 'PENDING'
                             ? 'bg-orange-100 text-orange-700'
                             : 'bg-red-100 text-red-700'

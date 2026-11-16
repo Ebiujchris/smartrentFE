@@ -11,6 +11,9 @@ export interface FinancialReport {
     status: string;
     dueDate: string;
     paidDate: string | null;
+    paidAmount: number;
+    outstandingAmount: number;
+    allocations: Array<{ amount: number; paidAt: string }>;
     method: string | null;
     tenant: string;
     property: string;

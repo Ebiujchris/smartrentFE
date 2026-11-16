@@ -61,11 +61,14 @@ export default function OverviewReport({ onNavigate }: { onNavigate?: (tab: Repo
     month.setDate(1);
     month.setMonth(month.getMonth() - (5 - index));
     const key = `${month.getFullYear()}-${month.getMonth()}`;
-    const amount = data.financial.payments.reduce((total, payment) => {
-      if (payment.status !== 'PAID' || !payment.paidDate) return total;
-      const paidDate = new Date(payment.paidDate);
-      return `${paidDate.getFullYear()}-${paidDate.getMonth()}` === key ? total + payment.amount : total;
-    }, 0);
+    const amount = data.financial.payments.reduce((total, payment) => (
+      total + payment.allocations.reduce((allocationTotal, allocation) => {
+        const paidDate = new Date(allocation.paidAt);
+        return `${paidDate.getFullYear()}-${paidDate.getMonth()}` === key
+          ? allocationTotal + allocation.amount
+          : allocationTotal;
+      }, 0)
+    ), 0);
     return { month: month.toLocaleDateString('en', { month: 'short' }), collected: amount };
   });
   const attentionItems = [

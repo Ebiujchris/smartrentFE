@@ -1,10 +1,11 @@
 'use client';
 
+'use client';
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useSubscriptionStore } from '@/store/subscriptionStore';
 
 const plans = [
   {
@@ -65,21 +66,11 @@ const plans = [
 
 export default function SubscriptionPage() {
   const router = useRouter();
-  const { updateSubscription } = useSubscriptionStore();
-  const [selectedPlan, setSelectedPlan] = useState('PROFESSIONAL');
   const [loading, setLoading] = useState(false);
 
-  const handleContinue = async () => {
+  const handleContinue = () => {
     setLoading(true);
-    try {
-      await updateSubscription({ plan: selectedPlan as any });
-      router.push('/onboarding/property');
-    } catch (error) {
-      console.error('Failed to update subscription:', error);
-      alert('Failed to select plan. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    router.push('/onboarding/property');
   };
 
   return (
@@ -88,10 +79,10 @@ export default function SubscriptionPage() {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-slate-900 mb-4">
-            Choose the plan that fits your needs
+            Your free trial starts with the Starter plan
           </h1>
           <p className="text-lg text-slate-600">
-            Start with a 30-day free trial. No payment required. Upgrade or downgrade anytime.
+            Your plan is locked for the 30-day free trial. You can change plans after the trial ends.
           </p>
         </div>
 
@@ -100,10 +91,9 @@ export default function SubscriptionPage() {
           {plans.map((plan) => (
             <div
               key={plan.id}
-              onClick={() => setSelectedPlan(plan.id)}
               className={`
-                relative bg-white rounded-2xl p-8 cursor-pointer transition-all
-                ${selectedPlan === plan.id
+                relative bg-white rounded-2xl p-8 transition-all
+                ${plan.id === 'STARTER'
                   ? 'ring-2 ring-emerald-500 shadow-xl scale-105'
                   : 'border border-slate-200 hover:shadow-lg'
                 }
@@ -128,7 +118,9 @@ export default function SubscriptionPage() {
                   </span>
                   <span className="text-slate-600">/month</span>
                 </div>
-                <p className="text-sm text-emerald-600 font-semibold">30 days free</p>
+                <p className="text-sm text-emerald-600 font-semibold">
+                  {plan.id === 'STARTER' ? '30 days free' : 'Available after trial'}
+                </p>
               </div>
 
               <ul className="space-y-3 mb-8">
@@ -141,13 +133,14 @@ export default function SubscriptionPage() {
               </ul>
 
               <Button
+                disabled
                 className={`w-full ${
-                  selectedPlan === plan.id
-                    ? 'bg-emerald-500 hover:bg-emerald-600'
-                    : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                  plan.id === 'STARTER'
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-slate-100 text-slate-500'
                 }`}
               >
-                {selectedPlan === plan.id ? 'Selected' : 'Select Plan'}
+                {plan.id === 'STARTER' ? 'Your trial plan' : 'Locked during trial'}
               </Button>
             </div>
           ))}
@@ -166,11 +159,11 @@ export default function SubscriptionPage() {
                 Setting up...
               </>
             ) : (
-              'Start 30-Day Free Trial'
+              'Continue with Starter trial'
             )}
           </Button>
           <p className="text-sm text-slate-500 mt-4">
-            No payment required. Cancel anytime during trial.
+            Plan changes become available after your 30-day trial ends.
           </p>
         </div>
       </div>

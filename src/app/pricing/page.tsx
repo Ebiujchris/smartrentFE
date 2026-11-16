@@ -103,7 +103,7 @@ export default function PricingPage() {
           <div className="container mx-auto px-4 md:px-8">
             <h1 className="text-4xl sm:text-5xl font-bold mb-6">Simple, Transparent Pricing</h1>
             <p className="text-lg text-slate-300 max-w-2xl">
-              All plans include 30 days free trial. No credit card required. Cancel anytime.
+              Start with a 30-day Starter trial. After the trial, choose a paid plan that fits your portfolio.
             </p>
           </div>
         </section>
@@ -186,11 +186,11 @@ export default function PricingPage() {
                 {[
                   {
                     q: 'Can I change my plan later?',
-                    a: 'Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately.'
+                    a: 'Your Starter plan is locked during the 30-day free trial. After it ends, you can change plans once payment is confirmed.'
                   },
                   {
                     q: 'What happens after my free trial?',
-                    a: 'We\'ll remind you 3 days before your trial ends. You can start a paid subscription or downgrade to a free plan if available.'
+                    a: 'After your trial ends, choose a paid plan to continue using the service. A plan change takes effect after payment is confirmed.'
                   },
                   {
                     q: 'Do you offer discounts for annual billing?',
@@ -198,7 +198,7 @@ export default function PricingPage() {
                   },
                   {
                     q: 'What if I exceed my unit limit?',
-                    a: 'You\'ll receive a warning when approaching your limit. You can upgrade immediately to add more units or contact support.'
+                    a: 'You\'ll receive a warning when approaching your limit. After the trial ends, you can upgrade once payment is confirmed or contact support.'
                   },
                 ].map((faq, index) => (
                   <div key={index} className="bg-white p-6 rounded-lg border border-slate-200">
@@ -216,7 +216,7 @@ export default function PricingPage() {
           <div className="container mx-auto px-4 md:px-8 text-center">
             <h2 className="text-4xl font-bold mb-6">Still have questions?</h2>
             <p className="text-lg text-emerald-50 mb-8">
-              Contact our support team and we'll be happy to help you find the right plan.
+              Contact our support team and we&apos;ll be happy to help you find the right plan.
             </p>
             <Button asChild className="bg-white text-emerald-600 hover:bg-slate-100 rounded-full px-8 h-12 text-base font-semibold">
               <Link href="/contact">Contact Us</Link>

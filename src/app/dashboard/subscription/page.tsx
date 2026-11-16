@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { CreditCard, Check, Clock, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAuthStore } from '@/store/authStore';
 import { useSubscriptionStore } from '@/store/subscriptionStore';
 import { usePropertyStore } from '@/store/propertyStore';
 import { toast } from 'sonner';
@@ -11,10 +10,8 @@ import { formatDate } from '@/lib/dateUtils';
 import PaymentModal from '@/components/subscription/PaymentModal';
 
 export default function SubscriptionPage() {
-  const { user } = useAuthStore();
-  const { subscription, trialStatus, loading, fetchSubscription, updateSubscription, fetchTrialStatus } = useSubscriptionStore();
+  const { subscription, trialStatus, loading, fetchSubscription, fetchTrialStatus } = useSubscriptionStore();
   const { properties } = usePropertyStore();
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedPlanForPayment, setSelectedPlanForPayment] = useState<{name: string; price: number; id: string} | null>(null);
 
@@ -23,36 +20,21 @@ export default function SubscriptionPage() {
     fetchTrialStatus();
   }, [fetchSubscription, fetchTrialStatus]);
 
-  const handleSelectPlan = async (plan: any) => {
-    // If subscription is expired or expiring, show payment modal
-    const isExpired = subscription?.status === 'EXPIRED' || (subscription?.status === 'TRIAL' && trialStatus?.expired);
-    const isExpiringSoon = subscription?.status === 'TRIAL' && trialStatus?.daysRemaining && trialStatus.daysRemaining <= 7;
-    
-    if (isExpired || isExpiringSoon) {
-      setSelectedPlanForPayment({
-        name: plan.name,
-        price: plan.price,
-        id: plan.id,
-      });
-      setPaymentModalOpen(true);
+  const handleSelectPlan = (plan: { id: string; name: string; price: number }) => {
+    const trialLocked =
+      subscription?.status === 'TRIAL' &&
+      (!trialStatus || !trialStatus.expired);
+    if (trialLocked) {
+      toast.info('Your trial plan is locked until the 30-day trial ends.');
       return;
     }
 
-    // Otherwise, allow free plan switch (during trial)
-    setSelectedPlan(plan.id);
-    try {
-      await updateSubscription({ plan: plan.id as any });
-      toast.success('Plan updated successfully!', {
-        description: 'You have 30 days free trial. No payment required.',
-      });
-    } catch (error) {
-      console.error('Failed to update plan:', error);
-      toast.error('Failed to update plan', {
-        description: 'Please try again or contact support.',
-      });
-    } finally {
-      setSelectedPlan(null);
-    }
+    setSelectedPlanForPayment({
+      name: plan.name,
+      price: plan.price,
+      id: plan.id,
+    });
+    setPaymentModalOpen(true);
   };
 
   const handlePaymentSuccess = () => {
@@ -148,7 +130,7 @@ export default function SubscriptionPage() {
           </div>
           <p className="text-emerald-50">
             You have {trialStatus.daysRemaining} days remaining in your free trial. 
-            No payment required until {formatDate(trialStatus.trialEndsAt)}.
+            Your {subscription.plan} plan is locked until {formatDate(trialStatus.trialEndsAt)}.
           </p>
         </div>
       )}
@@ -201,7 +183,7 @@ export default function SubscriptionPage() {
       {/* Available Plans */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
         <h2 className="text-xl font-bold text-slate-900 mb-2">Available Plans</h2>
-        <p className="text-slate-600 mb-6">All plans include 30 days free trial. No payment required to start.</p>
+        <p className="text-slate-600 mb-6">Plan changes are available after your 30-day trial and require confirmed payment.</p>
         
         <div className="grid md:grid-cols-3 gap-6">
           {plans.map((plan) => (
@@ -243,17 +225,19 @@ export default function SubscriptionPage() {
               <Button 
                 className={`w-full mt-6 ${subscription?.plan === plan.id ? 'bg-slate-400 cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-600'}`}
                 onClick={() => handleSelectPlan(plan)}
-                disabled={subscription?.plan === plan.id || selectedPlan === plan.id}
+                disabled={
+                  subscription?.plan === plan.id ||
+                  (subscription?.status === 'TRIAL' &&
+                    (!trialStatus || !trialStatus.expired))
+                }
               >
-                {selectedPlan === plan.id ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Updating...
-                  </>
-                ) : subscription?.plan === plan.id ? (
+                {subscription?.plan === plan.id ? (
                   'Current Plan'
+                ) : subscription?.status === 'TRIAL' &&
+                  (!trialStatus || !trialStatus.expired) ? (
+                  'Locked during trial'
                 ) : (
-                  'Select Plan'
+                  'Change plan'
                 )}
               </Button>
             </div>
@@ -278,8 +262,7 @@ export default function SubscriptionPage() {
           <div>
             <h3 className="font-semibold text-slate-900 mb-1">Payment Information</h3>
             <p className="text-sm text-slate-600">
-              All plans come with a 30-day free trial. You can change or cancel your plan anytime during the trial period. 
-              Payment integration will be enabled soon - for now, enjoy your free trial!
+              Your selected plan cannot be changed during the 30-day free trial. After the trial, plan changes require confirmed payment.
             </p>
           </div>
         </div>
