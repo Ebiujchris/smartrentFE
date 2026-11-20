@@ -23,6 +23,7 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
+    phone: '',
     password: '',
   });
 
@@ -168,6 +169,18 @@ export default function RegisterPage() {
                 value={formData.email}
                 onChange={handleChange}
                 className="focus-visible:ring-emerald-500 h-10 sm:h-11" 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone" className="text-slate-700 text-sm">Phone Number (optional)</Label>
+              <Input
+                id="phone"
+                type="tel"
+                autoComplete="tel"
+                placeholder="0700000000 or +256700000000"
+                value={formData.phone}
+                onChange={handleChange}
+                className="focus-visible:ring-emerald-500 h-10 sm:h-11"
               />
             </div>
             <div className="space-y-2">
