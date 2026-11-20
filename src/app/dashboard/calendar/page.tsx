@@ -112,6 +112,14 @@ function formatCurrency(amount: number | string): string {
   return `UGX ${Number(amount || 0).toLocaleString("en-UG", { maximumFractionDigits: 0 })}`;
 }
 
+function getOutstandingBalance(payment: PaymentRow): number {
+  const outstandingAmount = payment.outstandingAmount != null
+    ? Number(payment.outstandingAmount)
+    : Number(payment.amount) - Number(payment.paidAmount || 0);
+
+  return Number.isFinite(outstandingAmount) ? Math.max(0, outstandingAmount) : 0;
+}
+
 function formatLongDate(date: Date): string {
   return date.toLocaleDateString("en-UG", {
     weekday: "long",
@@ -277,6 +285,8 @@ export default function RentCalendarPage() {
   const selectedDayEvents = eventsByDay.get(dateKey(selectedDate)) || [];
   const monthDueEvents = filteredEvents.filter((event) =>
     event.kind === "due" &&
+    event.status !== "PAID" &&
+    event.status !== "CANCELLED" &&
     event.date.getMonth() === visibleMonth.getMonth() &&
     event.date.getFullYear() === visibleMonth.getFullYear(),
   );
@@ -287,7 +297,7 @@ export default function RentCalendarPage() {
   );
   const monthOverdueAmount = monthDueEvents
     .filter((event) => event.status === "OVERDUE")
-    .reduce((total, event) => total + Number(event.payment.amount || 0), 0);
+    .reduce((total, event) => total + getOutstandingBalance(event.payment), 0);
   const monthReceivedAmount = monthReceivedEvents
     .reduce((total, event) => total + Number(event.payment.amount || 0), 0);
 
@@ -538,7 +548,11 @@ export default function RentCalendarPage() {
               {days.map((date) => {
                 const key = dateKey(date);
                 const dateEvents = eventsByDay.get(key) || [];
-                const dueCount = dateEvents.filter((event) => event.kind === "due" && event.status !== "CANCELLED").length;
+                const dueCount = dateEvents.filter((event) =>
+                  event.kind === "due" &&
+                  event.status !== "PAID" &&
+                  event.status !== "CANCELLED",
+                ).length;
                 const overdueCount = dateEvents.filter((event) => event.kind === "due" && event.status === "OVERDUE").length;
                 const receivedCount = dateEvents.filter((event) => event.kind === "received").length;
                 const isSelected = key === dateKey(selectedDate);
@@ -592,8 +606,7 @@ export default function RentCalendarPage() {
                               {formatCurrency(
                                 isReceived
                                   ? event.payment.amount
-                                  : event.payment.outstandingAmount ??
-                                      Math.max(0, Number(event.payment.amount) - Number(event.payment.paidAmount || 0)),
+                                  : getOutstandingBalance(event.payment),
                               )}
                             </p>
                           </div>

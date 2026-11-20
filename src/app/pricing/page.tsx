@@ -251,7 +251,7 @@ export default function PricingPage() {
               <h3 className="text-white font-semibold mb-4">Contact</h3>
               <ul className="space-y-2 text-sm">
                 <li>Email: smartrent@gmail.com</li>
-                <li>Phone: +256 774 560 634</li>
+                <li>Phone: 0774 560 634</li>
               </ul>
             </div>
           </div>

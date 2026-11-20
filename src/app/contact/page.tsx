@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Mail, Phone, MapPin, MessageSquare } from 'lucide-react';
+import { Phone, MapPin, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
@@ -90,19 +90,11 @@ export default function ContactPage() {
                 
                 <div className="space-y-8">
                   <div className="flex gap-4">
-                    <Mail className="h-6 w-6 text-emerald-500 flex-shrink-0 mt-1" />
-                    <div>
-                      <h3 className="font-semibold text-slate-900 mb-1">Email</h3>
-                      <p className="text-slate-600">smartrent@gmail.com</p>
-                      <p className="text-sm text-slate-500 mt-1">We'll respond within 24 hours</p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4">
                     <Phone className="h-6 w-6 text-emerald-500 flex-shrink-0 mt-1" />
                     <div>
                       <h3 className="font-semibold text-slate-900 mb-1">Phone</h3>
-                      <p className="text-slate-600">+256 774 560 634</p>
+                      <p className="text-slate-600">0774 560 634</p>
+                      <p className="text-slate-600">0774 725437</p>
                       <p className="text-sm text-slate-500 mt-1">Monday - Friday, 9AM - 6PM EAT</p>
                     </div>
                   </div>
@@ -231,7 +223,7 @@ export default function ContactPage() {
               {[
                 {
                   q: 'How can I contact support?',
-                  a: 'You can reach us via email at smartrent@gmail.com, phone at +256 774 560 634, or use the chat feature in your dashboard.'
+                  a: 'You can reach us by phone at 0774 560 634 or 0774 725437, or use the chat feature in your dashboard.'
                 },
                 {
                   q: 'What are your business hours?',
@@ -239,7 +231,7 @@ export default function ContactPage() {
                 },
                 {
                   q: 'Do you offer phone support?',
-                  a: 'Yes! Call us at +256 774 560 634 during business hours. Premium members can schedule dedicated support calls.'
+                  a: 'Yes! Call us at 0774 560 634 or 0774 725437 during business hours. Premium members can schedule dedicated support calls.'
                 },
                 {
                   q: 'How quickly do you respond?',
@@ -247,7 +239,7 @@ export default function ContactPage() {
                 },
                 {
                   q: 'Can I request a demo?',
-                  a: 'Absolutely! Contact us at smartrent@gmail.com or call +256 774 560 634 to schedule a personalized demo.'
+                  a: 'Absolutely! Call us at 0774 560 634 or 0774 725437 to schedule a personalized demo.'
                 },
                 {
                   q: 'Do you offer training?',
@@ -289,8 +281,8 @@ export default function ContactPage() {
             <div>
               <h3 className="text-white font-semibold mb-4">Contact</h3>
               <ul className="space-y-2 text-sm">
-                <li>Email: smartrent@gmail.com</li>
-                <li>Phone: +256 774 560 634</li>
+                <li>Phone: 0774 560 634</li>
+                <li>Phone: 0774 725437</li>
               </ul>
             </div>
           </div>
