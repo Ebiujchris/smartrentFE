@@ -65,7 +65,7 @@ export default function PricingPage() {
         'Advanced security features',
         'Priority feature requests',
       ],
-      cta: 'Contact Sales',
+      cta: 'Get Started',
       popular: false,
     },
   ];
